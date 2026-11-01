@@ -1,0 +1,13 @@
+node_modules/
+test-results/
+dist/
+artifacts/
+outputs/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+douyin-ambilight-*.zip
+douyin-ambilight-*.xpi
+douyin-ambilight-*.user.js

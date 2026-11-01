@@ -1,0 +1,35 @@
+name: Manual validation and packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DA_OUTPUT: ${{ runner.temp }}/douyin-ambilight-output
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-02
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Set browser executable
+        run: node -e "require('fs').appendFileSync(process.env.GITHUB_ENV,'DA_CHROMIUM='+require('playwright').chromium.executablePath()+'\n')"
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:browser
+      - run: npm run test:advanced
+      - run: npm run test:reference
+      - run: npm run test:spatial
+      - run: npm run test:regions
+      - run: node scripts/verify.mjs
+      - run: npx web-ext lint --source-dir "$DA_OUTPUT/douyin-ambilight/firefox"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: douyin-ambilight-packages
+          path: ${{ env.DA_OUTPUT }}
+          retention-days: 7

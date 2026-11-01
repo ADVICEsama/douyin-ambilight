@@ -1,0 +1,26 @@
+{
+  "name": "douyin-ambilight",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/core.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:advanced": "node tests/advanced-browser.mjs",
+    "test:reference": "node tests/reference-browser.mjs",
+    "test:spatial": "node tests/spatial-browser.mjs",
+    "test:regions": "node tests/regions-browser.mjs"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.2",
+    "playwright": "1.61.1",
+    "pngjs": "^7.0.0",
+    "web-ext": "^10.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ADVICEsama/douyin-ambilight.git"
+  },
+  "homepage": "https://github.com/ADVICEsama/douyin-ambilight"
+}
