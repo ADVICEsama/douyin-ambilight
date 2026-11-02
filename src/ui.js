@@ -23,7 +23,7 @@
     const el = (tag, text, attrs = {}) => { const node=document.createElement(tag);if(text)node.textContent=text;for(const [k,v]of Object.entries(attrs))node.setAttribute(k,String(v));return node; };
     const style=el('style',css);shadow.append(style);
     const panel=el('section',null,{class:`panel${floating?' floating':''}`,'aria-label':'抖音环境光设置'});shadow.append(panel);
-    const header=el('header'),close=el('button','×',{class:'close','aria-label':'关闭设置'});header.append(el('h1','抖音环境光'),close);panel.append(header,el('div','DOUYIN AMBILIGHT · 0.5.3 · 本地渲染',{class:'sub'}));
+    const header=el('header'),close=el('button','×',{class:'close','aria-label':'关闭设置'});header.append(el('h1','抖音环境光'),close);panel.append(header,el('div','DOUYIN AMBILIGHT · 0.5.4 · 本地渲染',{class:'sub'}));
     function section(title, open=false){const d=el('details');d.open=open;d.append(el('summary',title));panel.append(d);return d;}
     function checkbox(parent,key,label){const row=el('label',label,{class:'row'});row.append(el('input',null,{type:'checkbox','data-key':key}));parent.append(row);}
     function range(parent,key,label,unit='%'){const row=el('label',null,{class:'range'}),line=el('span',label);line.append(el('output',null,{'data-for':key}));row.append(line,el('input',null,{type:'range','aria-label':label,'data-key':key,min:DACore.ranges[key][0],max:DACore.ranges[key][1],step:1,'data-unit':unit}));parent.append(row);}

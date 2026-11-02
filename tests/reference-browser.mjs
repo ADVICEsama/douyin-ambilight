@@ -18,7 +18,7 @@ try{
   side.insertAdjacentHTML('beforeend','<img id="comment-image" alt="test" style="width:30px;height:30px"><div data-e2e="comment-input" id="comment-input" style="background:rgb(70,70,80)"><textarea placeholder="留下你的评论" style="background:rgb(80,80,90)"></textarea></div>');document.body.append(side);
   for(const image of [document.querySelector('#head-image'),document.querySelector('#comment-image')])image.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><circle cx="15" cy="15" r="12" fill="#55dded"/></svg>');
  });
- await page.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.5.3.user.js'),'utf8')});
+ await page.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.5.4.user.js'),'utf8')});
  await page.waitForFunction(()=>document.querySelector('#douyin-ambilight-layer')?.dataset.state.includes('环境光运行中'));
  const ui=page.locator('#douyin-ambilight-ui');await page.keyboard.press('Alt+Shift+L');
  await check('all eleven reference categories exist; controls are backed by validated settings',async()=>{
@@ -79,6 +79,6 @@ try{
    await ui.getByRole('checkbox',{name:'启用环境光',exact:true}).uncheck();assert.equal(await page.locator('#head-image').evaluate(e=>e.style.opacity),'0.8');assert.equal(await page.locator('body').evaluate(e=>e.style.backgroundColor),'');assert.equal(await page.locator('html').evaluate(e=>e.style.scrollbarWidth),'');assert.equal(await page.locator('#main').evaluate(e=>e.style.filter),'');await ui.getByRole('checkbox',{name:'启用环境光',exact:true}).check();
  });
  await ui.evaluate(e=>{for(const d of e.shadowRoot.querySelectorAll('details'))d.open=false;e.shadowRoot.querySelector('.panel').scrollTop=0;});
- await page.screenshot({path:path.join(out,'完整分类-0.5.3-本地测试.png')});
+ await page.screenshot({path:path.join(out,'完整分类-0.5.4-本地测试.png')});
  assert.deepEqual(errors,[]);await writeFile(path.join(root,'test-results/reference.json'),JSON.stringify({checks,errors},null,2));console.log(`${checks.length} reference category checks passed`);
 }finally{await browser.close();}

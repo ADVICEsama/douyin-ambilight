@@ -37,6 +37,7 @@
   hideLayer();
   const uiHost = document.createElement('div'); uiHost.id = 'douyin-ambilight-ui';
   uiHost.style.cssText = 'all:initial;position:fixed;inset:0;pointer-events:none;z-index:2147483001;';
+  const modalStage=new DAPage.ModalStage([layer,dimmer,shadow],uiHost);
   const ui = DAUI.create(uiHost, settings, patch => {
     apply({ ...settings, ...patch });
     queueSave();
@@ -54,7 +55,7 @@
     const nativeText = !settings.hideNative ? '保留网站模糊背景' : `已隐藏 ${nativeCount} 个网站背景层`;
     const cropText = Object.entries(crop).map(([k,v]) => `${({top:'上',bottom:'下',left:'左',right:'右'})[k]} ${(v*100).toFixed(1)}%`).join(' / ');
     const regions=pageStyler.found;
-    const text = `${nativeText}\n视频源：${active?.videoWidth||0} × ${active?.videoHeight||0} · 取样 ${sampleInfo} · 单边上限 ${settings.maxCrop}%\n编码黑边：${detection}\n当前取样裁边：${cropText}${settings.cropVideo ? '\n原视频裁剪已开启（注意字幕）' : '\n编码裁边仅影响环境光'}\n播放器留白：${settings.removeLetterbox?'几何裁剪已启用（不裁原画内容）':'保留'}\nCSS 几何留白：${geometryInfo}\n合成：三层背景投影 / 独立视频背影\n渲染器：${renderer.mode==='webgl'?'WebGL2':'Canvas2D'} · 模式：${currentMode()}${rendererNote?'\n'+rendererNote:''}\n页面定位：顶栏 ${regions.header} / 左导航 ${regions.navigation} / 搜索 ${regions.search}\n评论推荐 ${regions.side} / 内容 ${regions.content} / 输入区 ${regions.sending} / 控制区 ${regions.controls}\n页面底板 ${regions.shell} / 已处理布局背景：${regions.surfaces} 层`;
+    const text = `${nativeText}\n视频源：${active?.videoWidth||0} × ${active?.videoHeight||0} · 取样 ${sampleInfo} · 单边上限 ${settings.maxCrop}%\n编码黑边：${detection}\n当前取样裁边：${cropText}${settings.cropVideo ? '\n原视频裁剪已开启（注意字幕）' : '\n编码裁边仅影响环境光'}\n播放器留白：${settings.removeLetterbox?'几何裁剪已启用（不裁原画内容）':'保留'}\nCSS 几何留白：${geometryInfo}\n合成：三层背景投影 / 独立视频背影${modalStage.root?' / 弹层隔离底板':''}\n渲染器：${renderer.mode==='webgl'?'WebGL2':'Canvas2D'} · 模式：${currentMode()}${rendererNote?'\n'+rendererNote:''}\n页面定位：顶栏 ${regions.header} / 左导航 ${regions.navigation} / 搜索 ${regions.search}\n评论推荐 ${regions.side} / 内容 ${regions.content} / 输入区 ${regions.sending} / 控制区 ${regions.controls}\n页面底板 ${regions.shell} / 已处理布局背景：${regions.surfaces} 层`;
     ui.diagnostics(text); layer.dataset.diagnostics = text;
   }
   function resetDetection() {
@@ -102,10 +103,7 @@
     // Fullscreen <video> is a replaced element: children cannot be rendered there.
     const fs = document.fullscreenElement;
     const parent = fs && fs.tagName !== 'VIDEO' ? fs : (document.body||document.documentElement);
-    if (dimmer.parentNode !== parent) parent.append(dimmer);
-    if (layer.parentNode !== parent) parent.append(layer);
-    if (shadow.parentNode !== parent) parent.append(shadow);
-    if (uiHost.parentNode !== parent) parent.append(uiHost);
+    modalStage.place(active&&allowedHere()?DAPage.modalRoot(active):null,parent,settings);
   }
   function visibleBox(video) {
     let rect = video.getBoundingClientRect();
@@ -128,16 +126,18 @@
     if (disposed || document.hidden) return;
     if(settings.prioritizeLoad&&document.readyState!=='complete'){setStatus('等待页面载入完成…');return;}
     place();
-    let best = null, bestScore = 0;
+    let best = null, bestScore = 0,bestModal=false;
     const fs = document.fullscreenElement;
     for (const video of document.querySelectorAll('video')) {
       if (video.closest('.xgplayer-dynamic-bg') || /blur\(/.test(getComputedStyle(video).filter)) continue;
       let blurredAncestor=false;for(let p=video.parentElement,n=0;p&&n<4;p=p.parentElement,n++){if(/blur\(/.test(getComputedStyle(p).filter)){blurredAncestor=true;break;}if(p===DANative.playerRoot(video))break;}if(blurredAncestor)continue;
       if (fs && fs !== video && !fs.contains(video)) continue;
+      const inModal=Boolean(DAPage.modalRoot(video));
+      if(DAPage.isSearchPage()&&!inModal&&!fs)continue;
       if (video.readyState < 2 || !video.videoWidth || video.ended || video.error || video === document.pictureInPictureElement) continue;
       const box = visibleBox(video); if (!box) continue;
       const score = C.score(box.rect, box.visible, !video.paused);
-      if (score > bestScore) { bestScore = score; best = video; }
+      if(score>0&&((inModal&&!bestModal)||(inModal===bestModal&&score>bestScore))){bestScore=score;best=video;bestModal=inModal;}
     }
     if (best !== active) {
       videoStyles.clear(); clipStyles.clear(); filterStyles.clear(); native.clear();
@@ -146,8 +146,8 @@
       baseScale = active ? getComputedStyle(active).scale : 'none';baseFilter=active?getComputedStyle(active).filter:'none';resetDetection();applyVideoScale();glBlocked=false;chooseRenderer();renderer.clear();
       hideLayer(); schedule();
     }
-    nativeCount = native.update(active, allowedHere() && settings.hideNative);pageStyler.update(active,settings,allowedHere());diagnostics();
-    if(!allowedHere()){videoStyles.clear();clipStyles.clear();filterStyles.clear();hideLayer();cancelFrame();}else applyVideoScale();
+    place();nativeCount = native.update(active, allowedHere() && settings.hideNative);pageStyler.update(active,settings,allowedHere());diagnostics();
+    if(!allowedHere()){videoStyles.clear();clipStyles.clear();filterStyles.clear();hideLayer();cancelFrame();}else {applyVideoScale();if(active)layout();}
     if (!active) { hideLayer(); setStatus('等待可见的 HTML5 视频…'); }
     else if (!settings.enabled) setStatus('环境光已关闭');
   }
@@ -246,13 +246,13 @@
     if (['autoH','autoV','threshold','maxCrop','stableFrames','coloredBars','colorTolerance','certainty','uneven'].some(k => old[k] !== settings[k])) resetDetection();
     if(old.renderer!==settings.renderer){glBlocked=false;rendererNote='';}chooseRenderer();
     crop = C.cropFor(settings, sampleBlocked ? C.emptyCrop() : barState.crop);
-    nativeCount = native.update(active, allowedHere() && settings.hideNative);pageStyler.update(active,settings,allowedHere());applyVideoScale();diagnostics();
+    place();nativeCount = native.update(active, allowedHere() && settings.hideNative);pageStyler.update(active,settings,allowedHere());applyVideoScale();diagnostics();
     if (!allowedHere()) {clipStyles.clear();filterStyles.clear();hideLayer();ui.metrics(null);setStatus(settings.enabled?'当前显示模式未启用环境光':'环境光已关闭');}
     else { tick(performance.now()); schedule(); }
   }
   const unsubscribe = DAPlatform.subscribe(apply);
   const observer = new MutationObserver(records => {
-    if (records.every(r => layer.contains(r.target) || uiHost.contains(r.target) || dimmer.contains(r.target)||shadow.contains(r.target))) return;
+    if (records.every(r => r.target.closest?.('[id^="douyin-ambilight"]'))) return;
     if (!scanTimer) scanTimer = setTimeout(() => { scanTimer = 0; scan(); }, 120);
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -278,7 +278,7 @@
   listen(window, 'pagehide', e => {
     cancelFrame(); hideLayer();
     if (e.persisted) return;
-    disposed = true; observer.disconnect(); clearInterval(interval); clearTimeout(scanTimer); clearTimeout(saveTimer); unsubscribe(); native.clear();videoStyles.clear();clipStyles.clear();filterStyles.clear();pageStyler.clear();projector.destroy();renderer.destroy();lifetime.abort();layer.remove();dimmer.remove();shadow.remove();uiHost.remove();
+    disposed = true; observer.disconnect(); clearInterval(interval); clearTimeout(scanTimer); clearTimeout(saveTimer); unsubscribe(); native.clear();videoStyles.clear();clipStyles.clear();filterStyles.clear();pageStyler.clear();projector.destroy();renderer.destroy();lifetime.abort();modalStage.clear();layer.remove();dimmer.remove();shadow.remove();uiHost.remove();
   });
   listen(window, 'pageshow', () => { dirty = true; scan(); schedule(); });
   place(); scan();

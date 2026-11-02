@@ -2,7 +2,7 @@
 
 为 **抖音网页版** 视频添加随画面变化的柔和环境光，让视频、评论区、导航和顶栏的背景自然衔接。
 
-**MIT 开源 · 本地渲染 · 非官方 · 当前测试版 0.5.3**
+**MIT 开源 · 本地渲染 · 非官方 · 当前测试版 0.5.4**
 
 > 灵感与功能分类参考 **Wessel Kroos** 的 [youtube-ambilight](https://github.com/WesselKroos/youtube-ambilight)，站点适配参考 **iceorange-dev** 的 [bilibili-ambilight](https://github.com/iceorange-dev/bilibili-ambilight)。感谢两位作者及上游贡献者。本项目是面向抖音的独立轻量实现，**不是原版完整引擎移植，也不代表上游作者或抖音官方**。详见[参考与致谢](#参考与致谢)和[功能对照](功能对照.md)。
 
@@ -24,7 +24,17 @@
 
 ![评论区、顶栏、输入区与视频共享环境光；本地模拟预览](docs/assets/comments-local.png)
 
-[更多区域预览](docs/assets/regions-local.png) · [独立底板与阴影预览](docs/assets/occlusion-local.png)
+[搜索弹层预览](docs/assets/search-modal-local.png) · [更多区域预览](docs/assets/regions-local.png) · [独立底板与阴影预览](docs/assets/occlusion-local.png)
+
+## 0.5.4：搜索视频弹层隔离
+
+搜索结果页打开视频时，结果卡片仍挂载在底下。旧版把视频弹层的祖先背景清空，却把环境光留在页面最底层，导致旧搜索卡片、缩略图和文字透出来。
+
+- 视频弹层使用**独立的不透明底板和局部投影层**；当前视频、评论、阴影和控制条在同一层级合成，不把搜索结果当背景。
+- 页面融合限制在当前视频弹层里；不改底层搜索页、导航、搜索框及其他对话框。普通搜索预览不启动全页透明化。
+- 处理弹层打开/关闭、重新挂载、原生 dialog、常见平移/缩放及窗口尺寸变化；关闭插件时恢复网站样式。
+- 修复 GitHub Actions 中错误使用 job-level `runner.temp` 的配置。此前推送产生的是工作流校验失败通知，**不是浏览器商店审核邮件，也不是已执行测试失败**。工作流仍只配置手动触发；没有替用户修改账号通知设置或删除失败记录。
+- 搜索弹层已完成本地复现、新旧包像素对照和回归；独立未登录的真实搜索页面遇到验证码，**尚未完成该真实路由验收**，未操作个人浏览器/鼠标键盘。
 
 ## 0.5.3：超宽黑边
 
@@ -40,15 +50,15 @@
 
 ## 下载
 
-从 [v0.5.3 Release](https://github.com/ADVICEsama/douyin-ambilight/releases/tag/v0.5.3) 下载。**0.5.3 修复超宽黑边漏检**，保留 0.5.1 的评论区融合修复与 0.5.2 的开源署名/文档；目前不在扩展商店发布。
+从 [v0.5.4 Release](https://github.com/ADVICEsama/douyin-ambilight/releases/tag/v0.5.4) 下载。**0.5.4 修复搜索弹层背景穿透，并修正 Actions 配置**，包含 0.5.3 的超宽黑边修复，保留 0.5.1 的评论区融合修复与 0.5.2 的开源署名/文档；目前不在扩展商店发布。
 
 | 使用方式 | 文件 |
 |---|---|
-| Chrome / Edge | [Chrome ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3-chrome.zip) |
-| Firefox / Zen 开发测试 | [未签名 XPI](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3-firefox-unsigned.xpi) |
-| 脚本管理器 | [用户脚本 .user.js](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3.user.js) |
-| 源码 | [源码 ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3-source.zip) |
-| 完整性核对 | [SHA256](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/SHA256-0.5.3.txt) |
+| Chrome / Edge | [Chrome ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.4/douyin-ambilight-0.5.4-chrome.zip) |
+| Firefox / Zen 开发测试 | [未签名 XPI](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.4/douyin-ambilight-0.5.4-firefox-unsigned.xpi) |
+| 脚本管理器 | [用户脚本 .user.js](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.4/douyin-ambilight-0.5.4.user.js) |
+| 源码 | [源码 ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.4/douyin-ambilight-0.5.4-source.zip) |
+| 完整性核对 | [SHA256](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.4/SHA256-0.5.4.txt) |
 
 源码、许可证及发布包公开可读；使用插件本身不需要 GitHub 登录。项目没有配置自动更新地址，需要手动更新。
 
@@ -157,13 +167,14 @@ npm run test:regions
 npm run test:occlusion
 npm run test:comments
 npm run test:wide-bars
+npm run test:search
 node scripts/verify.mjs
 npx web-ext lint --source-dir ../../outputs/douyin-ambilight/firefox
 ```
 
-默认输出到仓库的 `../../outputs`；可用 `DA_OUTPUT` 覆盖，验证和测试沿用同一变量。手动 CI 见 [.github/workflows/check.yml](.github/workflows/check.yml)，不会因推送自动触发，提交工作流不等于远程运行通过。
+默认输出到仓库的 `../../outputs`；可用 `DA_OUTPUT` 覆盖，验证和测试沿用同一变量。手动 CI 见 [.github/workflows/check.yml](.github/workflows/check.yml)，仅配置 `workflow_dispatch`；有效配置不会因普通推送跑测试，但无效配置仍可能在推送时产生校验失败通知。提交工作流不等于远程运行通过。
 
-本地已有 **24 项单元测试 + 81 项浏览器检查**。0.5.1 曾在一套 Zen 环境更新 XPI、刷新并打开真实评论区，确认面板、标签栏和输入区融合；这不等于所有路线、真实横竖屏切换、浏览器重启、GM 管理器或显卡组合都经过实测。0.5.3 另在独立未登录会话验证超宽编码黑边；验证范围及已知测试波动见[验证报告](验证报告.md)。
+本地通过 **24 项单元测试 + 94 项浏览器检查**（81 项原回归、12 项搜索弹层检查、1 项有旧包时执行的像素对照；干净构建为 93 项浏览器检查）。0.5.1 曾在一套 Zen 环境更新 XPI、刷新并打开真实评论区，确认面板、标签栏和输入区融合；这不等于所有路线、真实横竖屏切换、浏览器重启、GM 管理器或显卡组合都经过实测。0.5.3 另在独立未登录会话验证超宽编码黑边；验证范围及已知测试波动见[验证报告](验证报告.md)。
 
 ## 反馈问题
 

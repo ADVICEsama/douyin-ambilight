@@ -7,9 +7,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      DA_OUTPUT: ${{ runner.temp }}/douyin-ambilight-output
     steps:
+      - name: Set output directory on the runner
+        run: echo "DA_OUTPUT=$RUNNER_TEMP/douyin-ambilight-output" >> "$GITHUB_ENV"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, verified 2026-11-02
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -29,6 +29,7 @@ jobs:
       - run: npm run test:occlusion
       - run: npm run test:comments
       - run: npm run test:wide-bars
+      - run: npm run test:search
       - run: node scripts/verify.mjs
       - run: npx web-ext lint --source-dir "$DA_OUTPUT/douyin-ambilight/firefox"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
