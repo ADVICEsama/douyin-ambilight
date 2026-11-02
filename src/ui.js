@@ -23,7 +23,7 @@
     const el = (tag, text, attrs = {}) => { const node=document.createElement(tag);if(text)node.textContent=text;for(const [k,v]of Object.entries(attrs))node.setAttribute(k,String(v));return node; };
     const style=el('style',css);shadow.append(style);
     const panel=el('section',null,{class:`panel${floating?' floating':''}`,'aria-label':'抖音环境光设置'});shadow.append(panel);
-    const header=el('header'),close=el('button','×',{class:'close','aria-label':'关闭设置'});header.append(el('h1','抖音环境光'),close);panel.append(header,el('div','DOUYIN AMBILIGHT · 0.4.0 · 本地渲染',{class:'sub'}));
+    const header=el('header'),close=el('button','×',{class:'close','aria-label':'关闭设置'});header.append(el('h1','抖音环境光'),close);panel.append(header,el('div','DOUYIN AMBILIGHT · 0.5.1 · 本地渲染',{class:'sub'}));
     function section(title, open=false){const d=el('details');d.open=open;d.append(el('summary',title));panel.append(d);return d;}
     function checkbox(parent,key,label){const row=el('label',label,{class:'row'});row.append(el('input',null,{type:'checkbox','data-key':key}));parent.append(row);}
     function range(parent,key,label,unit='%'){const row=el('label',null,{class:'range'}),line=el('span',label);line.append(el('output',null,{'data-for':key}));row.append(line,el('input',null,{type:'range','aria-label':label,'data-key':key,min:DACore.ranges[key][0],max:DACore.ranges[key][1],step:1,'data-unit':unit}));parent.append(row);}
@@ -32,7 +32,7 @@
     const setup=section('设置',true);
     const preset=select(setup,'preset','光效预设',[['custom','自定义'],['balanced','均衡'],['cinema','影院'],['vivid','鲜艳'],['eco','省电']]);
     checkbox(setup,'enabled','启用环境光');checkbox(setup,'hideNative','隐藏抖音自带模糊背景');
-    setup.append(el('p','只隐藏识别到的播放器背景层；关闭环境光后恢复。以下分类按参考项目组织，不支持的引擎特性会在末尾说明。',{class:'note'}));
+    setup.append(el('p','隐藏识别到的播放器及当前视频卡片背景层（包括评论下方的原生模糊图）；关闭环境光后恢复。以下分类按参考项目组织，不支持的引擎特性会在末尾说明。',{class:'note'}));
     for(const [key,label]of [['showFPS','显示实测帧率'],['showFrametimes','显示帧间隔图'],['showResolutions','显示绘制分辨率与耗时'],['showBarStats','显示黑边统计']])checkbox(setup,key,label);
     const perf=section('质量与性能');
     select(perf,'renderer','渲染器',[['canvas','Canvas2D · 兼容优先'],['webgl','WebGL2 · GPU 取样']]);
@@ -55,7 +55,7 @@
     const ambient=section('环境光',true);range(ambient,'intensity','光线强度');range(ambient,'blur','柔化程度',' px');range(ambient,'spread','扩散范围',' px');range(ambient,'stretchX','横向延展');range(ambient,'stretchY','纵向延展');range(ambient,'fadeStart','扩散淡出起点');range(ambient,'fadeCurve','淡出曲线','');range(ambient,'debanding','去色带（静态噪声）');range(ambient,'fadeTime','画面淡入时间',' ms');range(ambient,'flicker','减少闪烁');checkbox(ambient,'frameBlending','平滑动态（帧混合）');range(ambient,'smoothing','过渡平滑');
     select(ambient,'blend','混合方式',[['screen','滤色 · 默认'],['plus-lighter','叠加发光'],['normal','普通透明混合']]);
     for(const [key,label]of [['glowTop','上方发光'],['glowBottom','下方发光'],['glowLeft','左侧发光'],['glowRight','右侧发光']])checkbox(ambient,key,label);
-    const immersive=section('沉浸');checkbox(immersive,'immersiveHeader','顶栏与搜索框融入背景');checkbox(immersive,'hideHeaderTheater','全屏模式隐藏页面顶栏');checkbox(immersive,'transparentNavigation','左侧导航融入背景');checkbox(immersive,'transparentSidePanels','侧栏融入背景');checkbox(immersive,'transparentControls','播放器控制区融入背景');checkbox(immersive,'transparentPageContent','视频信息与评论区融入背景');checkbox(immersive,'transparentSendingBar','弹幕和评论输入区融入背景');
+    const immersive=section('沉浸');checkbox(immersive,'transparentShell','网页外框与底板融入背景');checkbox(immersive,'immersiveHeader','顶栏与搜索框融入背景');checkbox(immersive,'hideHeaderTheater','全屏模式隐藏页面顶栏');checkbox(immersive,'transparentNavigation','左侧导航融入背景');checkbox(immersive,'transparentSidePanels','侧栏融入背景');checkbox(immersive,'transparentControls','播放器控制区融入背景');checkbox(immersive,'transparentPageContent','视频信息与评论区融入背景');checkbox(immersive,'transparentSendingBar','弹幕和评论输入区融入背景');
     immersive.append(el('p','只修改定位到的页面区域。下方状态会显示定位数量；数量为 0 代表当前页面尚未适配，不会把它报为成功。',{class:'note'}));
     const views=section('显示模式');checkbox(views,'enableNormal','普通模式启用');checkbox(views,'enableTheater','网页全屏启用');checkbox(views,'enableFullscreen','浏览器全屏启用');checkbox(views,'keepPaused','暂停时保留光效');
     views.append(el('p','直接让 video 元素原生全屏或进入画中画窗口时无法叠加，容器全屏可显示光效。',{class:'note'}));

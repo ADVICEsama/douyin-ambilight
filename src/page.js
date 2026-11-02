@@ -22,8 +22,26 @@
     return unique(result);
   }
   function outermost(nodes){return unique(nodes).filter(e=>!nodes.some(parent=>parent!==e&&parent.contains(e)));}
+  // Douyin also paints a fixed, empty sibling of the content tree. Clearing
+  // video ancestors cannot reveal a negative-z projector behind that sibling.
+  function shellPlanes(video){
+    const found=[],seen=new Set();
+    for(let branch=video,n=0;branch?.parentElement&&branch.parentElement!==document.documentElement&&n<22;branch=branch.parentElement,n++){
+      for(const e of branch.parentElement.children){
+        if(e===branch||seen.has(e)||own(e))continue;seen.add(e);
+        if(!e.matches('div,section')||e.contains(video)||e.textContent.trim()||e.closest('dialog,[role="dialog"],[aria-modal="true"]'))continue;
+        if(e.querySelector('video,img,canvas,svg,iframe,input,textarea,button,a,select,[role="button"],[role="dialog"],[contenteditable="true"]'))continue;
+        const r=rect(e),s=getComputedStyle(e),z=Number.parseInt(s.zIndex)||0;
+        if(r.width<innerWidth*.85||r.height<innerHeight*.75||!/(absolute|fixed)/.test(s.position)||z>0)continue;
+        // Before the foreground in DOM order, rather than a newly opened veil.
+        if(!(e.compareDocumentPosition(video)&Node.DOCUMENT_POSITION_FOLLOWING))continue;
+        found.push(e);
+      }
+    }
+    return outermost(found);
+  }
   class PageStyler{
-    constructor(){this.ledger=new DANative.StyleLedger();this.signature='';this.scrollStyle=null;this.surfaceStyle=null;this.pseudoMarks=new Map();this.found={header:0,navigation:0,search:0,side:0,content:0,sending:0,controls:0,surfaces:0};}
+    constructor(){this.ledger=new DANative.StyleLedger();this.signature='';this.scrollStyle=null;this.surfaceStyle=null;this.pseudoMarks=new Map();this.found={shell:0,header:0,navigation:0,search:0,side:0,content:0,sending:0,controls:0,surfaces:0};}
     regions(video){
       const player=video?DANative.playerRoot(video):null,pr=player?rect(player):{left:innerWidth*.18,right:innerWidth*.76,bottom:innerHeight,width:innerWidth*.6};
       const header=q(document,'header,[role="banner"],#douyin-header,[data-e2e="douyin-header"]');
@@ -40,14 +58,27 @@
         search.push(best);
       }
       const isNavigation=(e,r)=>r.left>=-30&&r.left<Math.min(100,pr.left)&&r.width>=56&&r.width<=Math.min(360,innerWidth*.3)&&r.height>=innerHeight*.35&&r.top<200&&r.right<=pr.left+55&&!e.contains(video);
-      const navigation=q(document,'#douyin-left-container,.douyin-left-container,[data-e2e="navigation"],[data-e2e="douyin-navigation"],[role="navigation"],nav,aside').filter(e=>isNavigation(e,rect(e)));
+      const navigation=q(document,'#douyin-navigation,#douyin-left-container,.douyin-left-container,[data-e2e="navigation"],[data-e2e="douyin-navigation"],[role="navigation"],nav,aside').filter(e=>isNavigation(e,rect(e)));
       navigation.push(...sampledAncestors([[24,innerHeight*.3],[72,innerHeight*.55],[24,innerHeight*.8],[120,innerHeight*.7]],isNavigation));
-      const side=q(document,'aside,[data-e2e="comment-panel"],[data-e2e="comment-list"],[data-e2e="recommend-sidebar"],.comment-panel,.commentContainer').filter(e=>!isNavigation(e,rect(e)));
-      if(video){let p=player;for(let level=0;level<4&&p?.parentElement;level++,p=p.parentElement)for(const sibling of p.parentElement.children){if(sibling===p||own(sibling))continue;const r=rect(sibling);if(r.width>=180&&r.width<900&&r.height>=250&&r.left>=pr.right-70)side.push(sibling);}}
+      const isSide=(e,r)=>!e.contains(video)&&!isNavigation(e,r)&&r.width>=180&&r.width<900&&r.height>=Math.min(250,innerHeight*.4)&&r.left>=pr.right-100&&r.left<innerWidth&&r.right>0&&r.top<innerHeight&&r.bottom>0;
+      const side=q(document,'#videoSideCard,#relatedVideoCard,#merge-all-comment-container,aside,[data-e2e="comment-panel"],[data-e2e="comment-list"],[data-e2e="recommend-sidebar"],.comment-panel,.commentContainer').filter(e=>isSide(e,rect(e)));
+      if(video){
+        const slide=video.closest('.sliderVideo,[id="sliderVideo"],[data-e2e="feed-active-video"],.dySwiperSlide');
+        // The live xgplayer may be inserted five or more wrappers below the
+        // card. Never assume that its fourth ancestor owns the comments.
+        for(let p=player,level=0;p?.parentElement&&p!==document.body&&level<12;level++,p=p.parentElement){
+          for(const sibling of p.parentElement.children)if(sibling!==p&&!own(sibling)&&isSide(sibling,rect(sibling)))side.push(sibling);
+          if(p.parentElement===slide)break;
+        }
+      }
       const content=q(document,'[data-e2e="video-desc"],[data-e2e="feed-video-desc"],[data-e2e="comment-list"],[data-e2e="comment-panel"],.video-info,.video-description,.comment-panel,main article');
-      const sending=q(document,'.xgplayer-danmu-input,.xgplayer-danmu-input-container,[data-e2e="comment-input"],[data-e2e="danmaku-input"]');
-      for(const input of q(document,'textarea,input[placeholder*="评论"],input[placeholder*="弹幕"],[contenteditable="true"][data-placeholder*="评论"],[contenteditable="true"][data-placeholder*="弹幕"]')){
+      // The unfocused Douyin editor is a DIV placeholder, not a textarea or
+      // contenteditable yet. Its semantic shell exists before the first click.
+      const sending=q(document,'.comment-input-container,.comment-input-inner-container,.xgplayer-danmu-input,.xgplayer-danmu-input-container,[data-e2e="comment-input"],[data-e2e="danmaku-input"]');
+      const fields=unique([...q(document,'textarea,input[placeholder*="评论"],input[placeholder*="弹幕"],[contenteditable="true"][data-placeholder*="评论"],[contenteditable="true"][data-placeholder*="弹幕"]'),...side.flatMap(e=>q(e,fieldSelector))]);
+      for(const input of fields){
         const ir=rect(input),maxWidth=Math.max(180,Math.min(900,ir.width*1.5+80));
+        if(!ir.width||!ir.height)continue;
         for(let p=input.parentElement,n=0;p&&p!==document.body&&n<5;p=p.parentElement,n++){
           const r=rect(p);if(p.matches('.xgplayer-controls,xg-controls,.xg-inner-controls')||r.height>140||r.width>maxWidth)break;
           if(r.height>=18&&r.width>=80)sending.push(p);
@@ -55,15 +86,17 @@
       }
       const controls=player?q(player,'.xgplayer-controls,xg-controls,.xgplayer-controls-bottom,.xgplayer-control-bottom,.xg-inner-controls,[data-e2e="player-controls"],[data-e2e="video-controls"]'):[];
       if(player)controls.push(...sampledAncestors([[pr.left+pr.width*.35,Math.min(pr.bottom,innerHeight)-20],[pr.left+pr.width*.7,Math.min(pr.bottom,innerHeight)-20]],(e,r)=>r.width>=pr.width*.55&&r.height>=20&&r.height<=120&&r.bottom>=Math.min(pr.bottom,innerHeight)-100&&player.contains(e)&&!e.contains(video)&&(e.querySelector('button,[role="button"],[role="slider"],input')||/倍速|全屏|清屏/.test((e.textContent||'').slice(0,200)))));
-      return{header:unique(header).filter(visible),navigation:outermost(navigation).filter(visible),search:outermost(search).filter(visible),side:unique(side).filter(visible),content:unique(content).filter(visible),sending:unique(sending).filter(visible),controls:unique(controls).filter(visible)};
+      return{shell:video?shellPlanes(video):[],header:unique(header).filter(visible),navigation:outermost(navigation).filter(visible),search:outermost(search).filter(visible),side:outermost(side).filter(visible),content:unique(content).filter(visible),sending:unique(sending).filter(visible),controls:unique(controls).filter(visible)};
     }
-    planes(region,kind){
+    planes(region,kind,editors=[]){
       const rr=rect(region),small=kind==='search'||kind==='sending'||kind==='controls';
       const nodes=[region];
       for(const e of q(region,'div,section,main,nav,ul,ol,form,xg-inner-controls,xg-left-grid,xg-right-grid').slice(0,450)){
-        const r=rect(e);if(!r.width||!r.height||e.matches('[role="button"],button'))continue;
+        const r=rect(e);if(!r.width||!r.height||e.matches('[role="button"],[role="tab"],button')||e.closest('dialog,[role="dialog"],[aria-modal="true"]'))continue;
+        if(kind==='side'&&editors.some(p=>p===e||p.contains(e)))continue;
         if(small){if(r.width>=Math.min(140,rr.width*.55)&&r.height>=18&&r.height<=120&&!e.querySelector('video,img,canvas'))nodes.push(e);}
         else if(r.width>=Math.max(kind==='navigation'?40:110,rr.width*.5)&&r.height>=90)nodes.push(e);
+        else if(kind==='side'&&r.width>=rr.width*.75&&r.height>=18&&r.height<=100&&r.top>=rr.top-1&&r.bottom<=rr.bottom+1&&(r.top<rr.top+90||r.bottom>rr.bottom-110)&&!e.querySelector('video,img,canvas'))nodes.push(e);
       }
       return unique(nodes);
     }
@@ -79,18 +112,20 @@
     }
     update(video,s,enabled=true){
       if(!enabled){this.clear();return;}
-      const regions=this.regions(video),groups=Object.fromEntries(Object.entries(regions).map(([kind,items])=>[kind,unique(items.flatMap(e=>this.planes(e,kind)))]));
+      const regions=this.regions(video),groups=Object.fromEntries(Object.entries(regions).map(([kind,items])=>[kind,unique(items.flatMap(e=>this.planes(e,kind,regions.sending)))]));
       const nodes=unique([...Object.values(groups).flat(),...regions.search.flatMap(e=>q(e,fieldSelector)),...regions.sending.flatMap(e=>q(e,fieldSelector))]);
       if(video)for(let p=video.parentElement;p&&p!==document.body;p=p.parentElement)nodes.push(p);
       const geometry=Object.values(regions).flat().map(e=>{const r=rect(e);return[r.x,r.y,r.width,r.height].map(Math.round).join(',');}).join('|');
       const signature=JSON.stringify(s)+'|'+geometry+'|'+mode(video);
-      if(signature===this.signature&&nodes.length===this.nodes?.length&&nodes.every((e,i)=>e===this.nodes[i]))return;
+      const intact=[...this.ledger.entries].every(([e,props])=>[...props].every(([key,r])=>e.style.getPropertyValue(key)===r.written&&e.style.getPropertyPriority(key)==='important'));
+      if(signature===this.signature&&nodes.length===this.nodes?.length&&nodes.every((e,i)=>e===this.nodes[i])&&intact)return;
       this.ledger.clear();this.restoreMarks(false);this.signature=signature;this.nodes=nodes;
       const write=(e,k,v)=>this.ledger.set(e,k,v),backgrounds=new Map(),surfaces=new Set();
       if(video&&document.body){write(document.body,'isolation','isolate');if(!s.customPageBackground)write(document.body,'background-color','#101116');}
       const fill=(e,opacity)=>{if(opacity>=100)return;if(!backgrounds.has(e))backgrounds.set(e,getComputedStyle(e).backgroundColor);write(e,'background-color',`color-mix(in srgb, ${backgrounds.get(e)} ${opacity}%, transparent)`);write(e,'background-image','none');surfaces.add(e);if(opacity===0){write(e,'border-color','transparent');write(e,'box-shadow','none');write(e,'backdrop-filter','none');this.softenPseudo(e);}};
       if(video)for(let p=video.parentElement;p&&p!==document.body;p=p.parentElement){write(p,'background-color','transparent');write(p,'background-image','none');surfaces.add(p);}
       const applyGroup=(key,opacity)=>{for(const e of groups[key])fill(e,opacity);};
+      if(s.transparentShell)applyGroup('shell',0);
       applyGroup('header',s.immersiveHeader?0:s.headerFillOpacity);
       if(s.immersiveHeader)applyGroup('search',0);
       for(const e of regions.header){if(s.hideHeaderTheater&&mode(video)!=='normal')write(e,'visibility','hidden');if(s.headerShadow&&s.headerShadowOpacity)write(e,'box-shadow',`0 0 ${s.headerShadow}px rgba(0,0,0,${s.headerShadowOpacity/100})`);if(s.headerImagesOpacity<100)for(const image of q(e,'img,svg'))write(image,'opacity',String(s.headerImagesOpacity/100));}
@@ -111,7 +146,7 @@
       if(!this.pseudoMarks.size){this.surfaceStyle?.remove();this.surfaceStyle=null;}
       this.found={...Object.fromEntries(Object.entries(regions).map(([k,v])=>[k,v.length])),surfaces:surfaces.size};
     }
-    clear(){this.ledger.clear();this.restoreMarks();this.scrollStyle?.remove();this.scrollStyle=null;this.signature='';this.nodes=[];this.found={header:0,navigation:0,search:0,side:0,content:0,sending:0,controls:0,surfaces:0};}
+    clear(){this.ledger.clear();this.restoreMarks();this.scrollStyle?.remove();this.scrollStyle=null;this.signature='';this.nodes=[];this.found={shell:0,header:0,navigation:0,search:0,side:0,content:0,sending:0,controls:0,surfaces:0};}
   }
   globalThis.DAPage={PageStyler,mode};
 })();

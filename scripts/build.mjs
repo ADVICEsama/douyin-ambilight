@@ -57,7 +57,7 @@ for (const browser of ['chrome', 'firefox']) {
   for (const size of [16, 32, 48, 128]) await writeFile(path.join(dir, 'icons', `${size}.png`), icon(size));
   for (const file of ['README.md', 'LICENSE', 'PRIVACY.md', '验证报告.md', '功能对照.md','CHANGELOG.md']) await copyFile(path.join(root, file), path.join(dir, file));
   await mkdir(path.join(dir,'docs','assets'),{recursive:true});
-  await copyFile(path.join(root,'docs','assets','regions-local.png'),path.join(dir,'docs','assets','regions-local.png'));
+  for(const file of ['regions-local.png','occlusion-local.png','comments-local.png'])await copyFile(path.join(root,'docs','assets',file),path.join(dir,'docs','assets',file));
   await writeFile(path.join(out, `douyin-ambilight-${pkg.version}-${browser}${browser === 'firefox' ? '-unsigned.xpi' : '.zip'}`), zipSync(await collect(dir)));
 }
 const meta = `// ==UserScript==

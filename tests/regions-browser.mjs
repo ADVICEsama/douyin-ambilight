@@ -19,7 +19,7 @@ async function check(name,fn){await fn();checks.push(name);console.log('PASS '+n
 try{
  await page.goto('http://localhost:54329/regions');await page.waitForFunction(()=>window.ready);
  const before=await page.evaluate(()=>Object.fromEntries(['.N1','.H7','.S8','#player','.xgplayer-controls','.comment-panel'].map(s=>{const r=document.querySelector(s).getBoundingClientRect();return[s,[r.x,r.y,r.width,r.height]];})));
- await page.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.4.0.user.js'),'utf8')});await page.waitForFunction(()=>document.querySelector('#douyin-ambilight-layer')?.dataset.state.includes('环境光运行中'));await page.waitForTimeout(300);
+ await page.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.5.1.user.js'),'utf8')});await page.waitForFunction(()=>document.querySelector('#douyin-ambilight-layer')?.dataset.state.includes('环境光运行中'));await page.waitForTimeout(300);
  await check('hashed left navigation and nested list backgrounds are discovered geometrically',async()=>{
   for(const s of ['.N1','.N2','.nav-list'])assert.equal(alpha((await read(s)).bg),0,s);
   assert.equal((await read('.nav-item.active')).bg,'rgb(52, 52, 56)');assert.match(await page.locator('#douyin-ambilight-layer').getAttribute('data-diagnostics'),/左导航 [1-9]/);
@@ -53,6 +53,6 @@ try{
   await ui.getByRole('checkbox',{name:'启用环境光',exact:true}).uncheck();
   assert.equal((await read('.N1')).bg,'rgb(16, 17, 20)');assert.equal((await read('.I2')).bg,'rgb(21, 22, 27)');assert.equal((await read('.S8 input')).bg,'rgb(69, 70, 76)');assert.equal((await read('.K3')).bg,'rgb(10, 11, 14)');assert.equal((await read('.input-shell')).bg,'rgb(59, 60, 68)');assert.match(await page.locator('.I2').evaluate(e=>getComputedStyle(e,'::after').backgroundImage),/gradient/);await ui.getByRole('checkbox',{name:'启用环境光',exact:true}).check();
  });
- await ui.getByRole('button',{name:'关闭设置'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'全区域融合-0.4.0-本地模拟.png')});
+ await ui.getByRole('button',{name:'关闭设置'}).click();await page.waitForTimeout(400);await page.screenshot({path:path.join(out,'全区域融合-0.5.1-本地模拟.png')});
  assert.deepEqual(errors,[]);await writeFile(path.join(root,'test-results/regions.json'),JSON.stringify({checks,errors},null,2));console.log(`${checks.length} full-region checks passed`);
 }finally{await browser.close();}

@@ -11,7 +11,7 @@
     videoScaleTheater: 100, videoScaleFullscreen: 100, videoShadow: 48, videoShadowOpacity: 65,
     coloredBars: false, colorTolerance: 20, certainty: 98, uneven: 35, cropOffset: 0, resetCropOnVideo: false, fillAfterCrop: false,
     filterTarget: 'ambient', fadeStart: 100, fadeCurve: 2, debanding: 0, fadeTime: 0, flicker: 0, frameBlending: true,
-    immersiveHeader: true, hideHeaderTheater: false, transparentSidePanels: true, transparentNavigation: true, transparentControls: true, transparentPageContent: true, transparentSendingBar: true,
+    immersiveHeader: true, hideHeaderTheater: false, transparentShell: true, transparentSidePanels: true, transparentNavigation: true, transparentControls: true, transparentPageContent: true, transparentSendingBar: true,
     enableNormal: true, enableTheater: true, enableFullscreen: true, keepPaused: true, panelTheme: 'dark', toggleKey: 'A', settingsKey: 'L'
   });
   const ranges = { intensity: [0, 100], spread: [30, 350], blur: [15, 150], saturation: [50, 250], smoothing: [0, 95],

@@ -12,7 +12,7 @@ await page.addInitScript(()=>{window.GM_getValue=(_k,f)=>JSON.parse(localStorage
 async function check(name,fn){await fn();checks.push(name);console.log(`PASS ${name}`);}
 try{
  await page.goto('http://localhost:54329/advanced');await page.waitForFunction(()=>window.ready);
- await page.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.4.0.user.js'),'utf8')});
+ await page.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.5.1.user.js'),'utf8')});
  await page.waitForFunction(()=>document.querySelector('#douyin-ambilight-layer')?.dataset.state.includes('环境光运行中'));
  const ui=page.locator('#douyin-ambilight-ui');await page.keyboard.press('Alt+Shift+L');
  await check('known native background hidden, main video retained',async()=>{
@@ -90,9 +90,9 @@ try{
  });
  await ui.getByRole('button',{name:'恢复默认设置'}).click();await page.evaluate(()=>document.querySelector('#main').pause());
  await page.locator('#douyin-ambilight-ui').evaluate(el=>{for(const d of el.shadowRoot.querySelectorAll('details'))d.open=false;el.shadowRoot.querySelector('.panel').scrollTop=0;});
- await page.screenshot({path:path.join(out,'设置面板-0.4.0-本地测试.png')});
+ await page.screenshot({path:path.join(out,'设置面板-0.5.1-本地测试.png')});
  await ui.getByText('移除黑边与彩色边',{exact:true}).click();await ui.getByText('移除黑边与彩色边',{exact:true}).scrollIntoViewIfNeeded();
- await page.screenshot({path:path.join(out,'黑边设置-0.4.0-本地测试.png')});
+ await page.screenshot({path:path.join(out,'黑边设置-0.5.1-本地测试.png')});
  await check('no advanced runtime errors',async()=>assert.deepEqual(errors,[]));
  await mkdir(path.join(root,'test-results'),{recursive:true});await writeFile(path.join(root,'test-results/advanced.json'),JSON.stringify({checks,errors},null,2));console.log(`${checks.length} advanced browser checks passed`);
 }finally{await context.close();}

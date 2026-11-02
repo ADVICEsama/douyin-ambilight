@@ -26,6 +26,8 @@ jobs:
       - run: npm run test:reference
       - run: npm run test:spatial
       - run: npm run test:regions
+      - run: npm run test:occlusion
+      - run: npm run test:comments
       - run: node scripts/verify.mjs
       - run: npx web-ext lint --source-dir "$DA_OUTPUT/douyin-ambilight/firefox"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

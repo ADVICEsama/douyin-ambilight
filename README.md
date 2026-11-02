@@ -1,32 +1,46 @@
-# 抖音环境光 0.4.0 · 全区域沉浸适配测试版
+# 抖音环境光 0.5.1 · 全区域沉浸适配测试版
 
-参考 [bilibili-ambilight](https://github.com/iceorange-dev/bilibili-ambilight) 和原作 [WesselKroos/youtube-ambilight](https://github.com/WesselKroos/youtube-ambilight) 的分类组织，提供 85 个本地持久设置及预设（另有内部迁移版本字段）。**这是面向抖音的独立实现，不是原项目引擎或全部功能的一比一移植。** 具体差异见同目录《功能对照.md》。
+参考 [bilibili-ambilight](https://github.com/iceorange-dev/bilibili-ambilight) 和原作 [WesselKroos/youtube-ambilight](https://github.com/WesselKroos/youtube-ambilight) 的分类组织，提供 86 个本地持久设置及预设（另有内部迁移版本字段）。**这是面向抖音的独立实现，不是原项目引擎或全部功能的一比一移植。** 具体差异见同目录《功能对照.md》。
 
 ## 下载
 
-- [v0.4.0 测试包与源码](https://github.com/ADVICEsama/douyin-ambilight/releases/tag/v0.4.0)
+- [v0.5.1 测试包与源码](https://github.com/ADVICEsama/douyin-ambilight/releases/tag/v0.5.1)
 - [更新记录](CHANGELOG.md) · [验证范围](验证报告.md) · [与原作差异](功能对照.md)
 
 当前仓库为私有仓库，下载需要已获访问权限的 GitHub 登录。未配置脚本自动更新地址，不需要任何外部账号来运行插件本身。
 
 ![全区域融合，本地模拟而非抖音实拍](docs/assets/regions-local.png)
 
-## 0.4 新增区域
+## 0.5.1 评论区修复
 
-此前的适配仍会漏掉左导航的哈希容器、搜索框内部短背景、控制条内层和评论输入外壳。0.4 补充：
+- 当前播放器会多插入若干包装层，0.5.0 固定向上找 4 层会漏掉评论卡片；改为识别真实卡片标记并在当前视频卡片内有界查找。
+- 评论面板的外壳、顶部短标签栏、列表背景及未聚焦的 DIV 占位编辑器一起融合；不是只有 textarea 才适配。
+- 保留选中标签、文字、头像和回复按钮。输入区开关与侧栏开关独立，整块面板被重新挂载后会重新适配。
+- 已在用户当前 Zen 安装 0.5.1 XPI 并刷新、打开真实评论区，核对面板/标签栏/输入区均透明，截图可见连续环境光。没有提交真实评论、修改签名政策或开启隐私窗口权限。
 
-- 左侧导航：根容器、嵌套列表和底部所在背景；保留选中项、图标与点击区域。
-- 顶栏和搜索：向上识别真实顶栏，处理搜索外壳、内部层、输入框，以及大尺寸背景伪元素；图标伪元素不清除。
-- 播放器控制区：控制条、内部短背景与渐变伪元素融合，保留按钮、进度条和原有布局。
-- 评论/弹幕输入：处理输入框外部多层短容器，不只是 textarea 自身。
-- 子容器被替换时重新识别；左侧导航和控制区有独立开关。
+![评论区深层包装与 DIV 编辑器回归，本地重建非实拍](docs/assets/comments-local.png)
 
-新增区域是有边界的检测，不保证所有抖音路线或未来改版均命中。状态区分别报告左导航、搜索、控制区与处理层数。浏览器自身的标签侧栏、书签栏和标题栏不属于网页，插件不会改它们。
+## 0.5 与 0.4 的实际区别
+
+0.4 主要补充导航、搜索、控制栏等内部背景的透明化，但真实页面仍有两处遮挡，因此定位成功也不代表外框已经照亮：
+
+- 独立的全页暗色底板是内容树的空兄弟节点，不是 video 的父节点；它会盖住背景层中的环境光和阴影。
+- 原生模糊图位于播放器外的当前视频卡片中，覆盖视频和评论；其容器还包含一块黑色承托层。只藏图片会留下黑板。
+
+0.5 新增有界的空底板识别，以及当前卡片的原生模糊/黑底组合层识别。新增“网页外框与底板融入背景”开关；原生背景仍受原来的隐藏开关控制。高层弹窗、按钮、头像、弹幕不作为底板隐藏。
+
+视频背影改为近边接触阴影 + 外围柔影，不靠把整个视频容器涂黑。网站覆盖同一节点的背景样式时也会重新适配，关闭插件则还原网站最新值。
+
+本轮通过 Zen 开发者工具读取了实际结构，并临时验证清除底板能照亮导航/顶栏；临时修改已恢复。新增 9 项真实结构重建的像素回归，**模拟图不是抖音实拍，新包完整安装后的其他路线仍需验收**。
+
+![独立底板与原生模糊组合层，本地重建非实拍](docs/assets/occlusion-local.png)
+
+浏览器自身的标签侧栏、书签栏和标题栏不属于网页，插件不会改它们。
 
 ## 从旧版更新（Zen / Firefox 推荐）
 
 1. 打开你已安装的 Tampermonkey / Violentmonkey，编辑原来的“抖音环境光”脚本。
-2. 用文本编辑器打开 `douyin-ambilight-0.4.0.user.js`，复制全部内容，**在原脚本中全选替换并保存**。
+2. 用文本编辑器打开 `douyin-ambilight-0.5.1.user.js`，复制全部内容，**在原脚本中全选替换并保存**。
 3. 刷新抖音。不要同时启用新旧两份脚本，也不要同时开启扩展版与脚本版。
 4. 设置中的“隐藏抖音自带模糊背景”默认开启。状态区应显示“已隐藏 N 个网站背景层”；N=0 表示该播放器结构未识别，不能算已处理成功。
 
@@ -36,11 +50,11 @@
 
 ## Chrome / Edge 扩展
 
-解压 `douyin-ambilight-0.4.0-chrome.zip` 到固定目录。打开 `chrome://extensions` / `edge://extensions`，开发者模式 → 加载已解压扩展，选择包含 manifest.json 的目录。已有旧版则替换原目录文件、在扩展页重新加载，然后刷新抖音。不要删除已加载的目录。
+解压 `douyin-ambilight-0.5.1-chrome.zip` 到固定目录。打开 `chrome://extensions` / `edge://extensions`，开发者模式 → 加载已解压扩展，选择包含 manifest.json 的目录。已有旧版则替换原目录文件、在扩展页重新加载，然后刷新抖音。不要删除已加载的目录。
 
 ## Zen / Firefox XPI
 
-`douyin-ambilight-0.4.0-firefox-unsigned.xpi` **未签名，仅供开发测试**。可从 `about:debugging#/runtime/this-firefox` 临时载入；临时安装会在重启后消失，不能当成持久安装。Firefox 正式安装需要 Mozilla 签名，Zen 行为也受版本和配置影响。没有修改任何签名或安全设置，也没有替你发布、上传或签名。参见 [Mozilla 签名说明](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/)。
+`douyin-ambilight-0.5.1-firefox-unsigned.xpi` **未签名，仅供开发测试**。可从 `about:debugging#/runtime/this-firefox` 临时载入；临时安装会在重启后消失，不能当成持久安装。Firefox 正式安装需要 Mozilla 签名，Zen 行为也受版本和配置影响。没有修改任何签名或安全设置，也没有替你发布、上传或签名。参见 [Mozilla 签名说明](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/)。
 
 ## 11 个设置分类
 
@@ -54,7 +68,7 @@
 | 移除黑边与彩色边 | 横纵自动检测、均匀彩色边、阈值、确定性、不对称容差、稳定样本、间隔、偏移、手动四边裁剪、换片重置、裁剪原视频、放大填满 |
 | 滤镜 | 亮度 / 对比度 / 饱和度 / 色相；作用于环境光、原视频或两者 |
 | 环境光 | 强度、模糊、扩散、横纵延展、淡出起点与曲线、静态噪声去色带、淡入、减少闪烁、帧混合、混合方式、四向发光 |
-| 沉浸 | 顶栏/搜索、左导航、评论推荐侧栏、视频信息/评论、播放器控制区和输入区融合，全屏隐藏顶栏 |
+| 沉浸 | 网页外框/底板、顶栏/搜索、左导航、评论推荐侧栏、视频信息/评论、播放器控制区和输入区融合，全屏隐藏顶栏 |
 | 显示模式 | 普通 / 网页全屏 / 浏览器全屏各自开关、暂停保留或隐藏光效 |
 | 基本设置 | 暗/亮/跟随系统面板、悬浮入口、快捷键选择；另有恢复默认、JSON 导入与导出 |
 
@@ -79,7 +93,7 @@
 
 ## 验证与开发
 
-真实抖音新功能和 Zen 视觉验收尚未完成，详见《验证报告.md》。本地合成视频预览不是真实抖音实拍。
+0.5.1 已在当前 Zen 抖音页更新 XPI 并确认评论区融合；其他路线、长时间播放和重启仍未全面验收，详见《验证报告.md》。本地合成视频预览不是真实抖音实拍。
 
 ## 已有合成与边界修复
 
@@ -101,6 +115,8 @@ npm run test:advanced
 npm run test:reference
 npm run test:spatial
 npm run test:regions
+npm run test:occlusion
+npm run test:comments
 node scripts/verify.mjs
 npx web-ext lint --source-dir ../../outputs/douyin-ambilight/firefox
 ```

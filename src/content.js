@@ -31,7 +31,7 @@
   function allowedHere() {return settings.enabled&&settings[({normal:'enableNormal',theater:'enableTheater',fullscreen:'enableFullscreen'})[currentMode()]];}
   const dimmer = document.createElement('div'); dimmer.id = 'douyin-ambilight-dimmer'; dimmer.setAttribute('aria-hidden', 'true');
   dimmer.style.cssText = 'all:initial;position:fixed;inset:0;pointer-events:none;background:#000;z-index:-2;display:none;';
-  const shadow = document.createElement('div');shadow.id='douyin-ambilight-video-shadow';shadow.setAttribute('aria-hidden','true');shadow.style.cssText='all:initial;position:fixed;pointer-events:none;z-index:-1;display:none;background:#000;';
+  const shadow = document.createElement('div');shadow.id='douyin-ambilight-video-shadow';shadow.setAttribute('aria-hidden','true');shadow.style.cssText='all:initial;position:fixed;pointer-events:none;z-index:-1;display:none;background:transparent;';
   function hideLayer() {layer.hidden = true;layer.style.display = 'none';dimmer.style.display = 'none';shadow.style.display='none';projector.stop();}
   function showLayer() {layer.hidden = false;layer.style.display = 'block';dimmer.style.display = settings.dim ? 'block' : 'none';shadow.style.display=settings.videoShadow&&settings.videoShadowOpacity?'block':'none';}
   hideLayer();
@@ -54,7 +54,7 @@
     const nativeText = !settings.hideNative ? '保留网站模糊背景' : `已隐藏 ${nativeCount} 个网站背景层`;
     const cropText = Object.entries(crop).map(([k,v]) => `${({top:'上',bottom:'下',left:'左',right:'右'})[k]} ${(v*100).toFixed(1)}%`).join(' / ');
     const regions=pageStyler.found;
-    const text = `${nativeText}\n编码黑边：${detection}\n当前取样裁边：${cropText}${settings.cropVideo ? '\n原视频裁剪已开启（注意字幕）' : '\n编码裁边仅影响环境光'}\n播放器留白：${settings.removeLetterbox?'几何裁剪已启用（不裁原画内容）':'保留'}\n合成：三层背景投影 / 独立视频背影\n渲染器：${renderer.mode==='webgl'?'WebGL2':'Canvas2D'} · 模式：${currentMode()}${rendererNote?'\n'+rendererNote:''}\n页面定位：顶栏 ${regions.header} / 左导航 ${regions.navigation} / 搜索 ${regions.search}\n评论推荐 ${regions.side} / 内容 ${regions.content} / 输入区 ${regions.sending} / 控制区 ${regions.controls}\n已处理布局背景：${regions.surfaces} 层`;
+    const text = `${nativeText}\n编码黑边：${detection}\n当前取样裁边：${cropText}${settings.cropVideo ? '\n原视频裁剪已开启（注意字幕）' : '\n编码裁边仅影响环境光'}\n播放器留白：${settings.removeLetterbox?'几何裁剪已启用（不裁原画内容）':'保留'}\n合成：三层背景投影 / 独立视频背影\n渲染器：${renderer.mode==='webgl'?'WebGL2':'Canvas2D'} · 模式：${currentMode()}${rendererNote?'\n'+rendererNote:''}\n页面定位：顶栏 ${regions.header} / 左导航 ${regions.navigation} / 搜索 ${regions.search}\n评论推荐 ${regions.side} / 内容 ${regions.content} / 输入区 ${regions.sending} / 控制区 ${regions.controls}\n页面底板 ${regions.shell} / 已处理布局背景：${regions.surfaces} 层`;
     ui.diagnostics(text); layer.dataset.diagnostics = text;
   }
   function resetDetection() {
@@ -188,7 +188,8 @@
       layer.style.opacity = String(settings.intensity / 100*.82);
       projector.configure(image,settings);
       for(const [key,value]of Object.entries({left:hole.left,top:hole.top,width:hole.width,height:hole.height}))shadow.style[key]=value+'px';
-      shadow.style.boxShadow=`0 5px ${settings.videoShadow}px ${Math.round(settings.videoShadow*.15)}px rgba(0,0,0,${settings.videoShadowOpacity/100})`;
+      const radius=settings.videoShadow,alpha=settings.videoShadowOpacity/100;
+      shadow.style.boxShadow=radius?`0 2px ${Math.max(2,Math.round(radius*.22))}px 1px rgba(0,0,0,${alpha*.8}),0 7px ${radius}px ${Math.round(radius*.15)}px rgba(0,0,0,${alpha})`:'none';
       canvas.style.left = `${image.left - spreadX}px`; canvas.style.top = `${image.top - spreadY}px`;
       canvas.style.width = `${image.width + spreadX * 2}px`; canvas.style.height = `${image.height + spreadY * 2}px`;
       canvas.style.filter = `blur(${settings.blur}px) ${settings.filterTarget!=='video'?adjustment:''}`;

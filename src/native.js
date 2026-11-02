@@ -22,11 +22,15 @@
     clear() { for (const el of [...this.entries.keys()]) this.restore(el); }
   }
   function playerRoot(video) {
-    const known = video.closest('.xgplayer, .douyin-player') || video.closest('[data-e2e="feed-active-video"], [data-e2e="video-player"], .xg-video-container');
+    const known = video.closest('.xgplayer, .douyin-player, .basePlayerContainer') || video.closest('[data-e2e="feed-active-video"], [data-e2e="video-player"], .xg-video-container');
     if (known) return known;
     let p = video.parentElement;
     for (let i = 0; i < 2 && p?.parentElement && !['BODY', 'HTML'].includes(p.parentElement.tagName); i++) p = p.parentElement;
     return p;
+  }
+  function backgroundRoot(video){
+    const player=playerRoot(video),slide=video.closest('.sliderVideo,[id="sliderVideo"],[data-e2e="feed-active-video"],.dySwiperSlide');
+    return slide&&slide.contains(player)?slide:player;
   }
   class NativeBackground {
     constructor() { this.ledger = new StyleLedger(); this.video = null; this.pseudos=new Map();this.style=null; }
@@ -34,10 +38,16 @@
     update(video, enabled) {
       if (video !== this.video) { this.ledger.clear();this.clearPseudo(); this.video = video; }
       if (!enabled || !video) { this.ledger.clear();this.clearPseudo(); return 0; }
-      const root = playerRoot(video); if (!root) return 0;
+      const root = backgroundRoot(video); if (!root) return 0;
       const box = video.getBoundingClientRect(), keep = new Set(),seenPseudos=new Map();
+      const player=playerRoot(video);
+      let foregroundZ=Number.parseInt(getComputedStyle(video).zIndex)||0;
+      for(let p=video.parentElement;p&&p!==root;p=p.parentElement)foregroundZ=Math.max(foregroundZ,Number.parseInt(getComputedStyle(p).zIndex)||0);
+      // Media can live after a long comment list, outside the xgplayer root.
+      // Include it explicitly instead of truncating the whole slide at 500 nodes.
+      const candidates=[...new Set([root,...(player?[player,...player.querySelectorAll('*')].slice(0,500):[]),...root.querySelectorAll('img,canvas,.xgplayer-dynamic-bg,.imgBackground,[class*="background"],[class*="Background"]')])];
       // Confirmed upstream xgplayer selector + conservative local blur heuristic.
-      for (const el of [root,...root.querySelectorAll('*')].slice(0, 500)) {
+      for (const el of candidates) {
         const known = el.matches('.xgplayer-dynamic-bg');
         if (el === video || el.closest('[id^="douyin-ambilight"]')) continue;
         const er=el.getBoundingClientRect();
@@ -62,8 +72,21 @@
         const aligned=rect.left<=box.left+20&&rect.top<=box.top+20&&rect.right>=box.right-20&&rect.bottom>=box.bottom-20;
         // Background canvases may already be blurred internally (no CSS filter).
         const backgroundPlane=large&&aligned&&(beforeVideo||z<vz)&&behind&&/absolute|fixed/.test(style.position)&&noControls&&!el.textContent.trim()&&(/^(CANVAS|IMG|VIDEO)$/.test(el.tagName)||style.backgroundImage!=='none');
-        if (known || backgroundPlane || (large && media && noControls && blur && Number(blur[1]) >= 8) || (large && named && media && noControls && blur)) keep.add(el);
+        const insidePlayer=player?.contains(el),backgroundLevel=insidePlayer||z<foregroundZ||(beforeVideo&&z<=foregroundZ);
+        if (known || backgroundPlane || (large && media && noControls && blur && Number(blur[1]) >= 8 && backgroundLevel) || (large && named && media && noControls && blur && backgroundLevel)) {
+          let target=el;
+          // Hide the whole image backing cluster, not just its blurred <img>.
+          // Douyin's sibling cluster also contains a solid black child plane.
+          if(blur&&Number(blur[1])>=8&&large)for(let p=el.parentElement,n=0;p&&p!==root&&n<2;p=p.parentElement,n++){
+            const ps=getComputedStyle(p),pr=p.getBoundingClientRect(),pz=Number.parseInt(ps.zIndex)||0;
+            if(p.contains(video)||p.textContent.trim()||p.querySelector('video,button,input,textarea,a,[role="dialog"],[role="button"]')||p.closest('dialog,[role="dialog"],[aria-modal="true"]'))break;
+            if(!/absolute|fixed/.test(ps.position)||pr.width<box.width*.7||pr.height<box.height*.7||pr.width>innerWidth*1.5||pr.height>innerHeight*1.5||(!player?.contains(p)&&pz>=foregroundZ))break;
+            target=p;
+          }
+          keep.add(target);
+        }
       }
+      for(const el of [...keep])if([...keep].some(parent=>parent!==el&&parent.contains(el)))keep.delete(el);
       for (const el of [...this.ledger.entries.keys()]) if (!keep.has(el)) this.ledger.restore(el);
       for (const el of keep) this.ledger.set(el, 'visibility', 'hidden');
       for(const [el,attrs]of this.pseudos){for(const [attr,value]of attrs)if(!seenPseudos.get(el)?.has(attr)){if(value===null)el.removeAttribute(attr);else el.setAttribute(attr,value);attrs.delete(attr);}if(!attrs.size)this.pseudos.delete(el);}
