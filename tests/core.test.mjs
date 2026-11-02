@@ -71,7 +71,7 @@ test('manual crop works independently of auto pixel access',()=>{
 });
 test('new advanced settings validate enums, numbers, booleans and presets',()=>{
  const s=C.normalize({blend:'evil',quality:999,threshold:-1,maxCrop:80,videoScale:900,hideNative:false,fps:60,detectInterval:250});
- assert.equal(s.blend,C.defaults.blend);assert.equal(s.quality,96);assert.equal(s.threshold,0);assert.equal(s.maxCrop,35);assert.equal(s.videoScale,180);assert.equal(s.hideNative,false);assert.equal(s.fps,60);assert.equal(s.detectInterval,250);
+ assert.equal(s.blend,C.defaults.blend);assert.equal(s.quality,96);assert.equal(s.threshold,0);assert.equal(s.maxCrop,45);assert.equal(s.videoScale,180);assert.equal(s.hideNative,false);assert.equal(s.fps,60);assert.equal(s.detectInterval,250);
  assert.equal(C.normalize(C.presets.eco).fps,12);
 });
 test('direction mask excludes disabled directions',()=>{
@@ -91,4 +91,30 @@ test('asymmetry limit and detection crop offset are honored',()=>{
 test('24 FPS limit on 30 FPS source does not collapse to 15 FPS',()=>{
  let next=0,count=0;for(let i=0;i<300;i++){const result=C.frameDeadline(i*1000/30,next,24);if(result.due){count++;next=result.next;}}
  assert.ok(count>=239&&count<=241,`${count} frames in 10 seconds`);
+});
+test('giant horizontal bars in a tall encoded frame are found with the new default',()=>{
+ const f=frame(108,212,{top:78,bottom:78,left:0,right:0}),a=C.analyzeBars(f);
+ assert.equal(a.reason,'detected');assert.equal(a.crop.top,78/212);assert.equal(a.crop.bottom,78/212);
+ assert.ok(C.cropFor(C.defaults,a.crop).top>.36);
+});
+test('explicit old 25 percent limit is respected but reported as a limit instead of no bars',()=>{
+ const a=C.analyzeBars(frame(108,212,{top:78,bottom:78,left:0,right:0}),18,25);
+ assert.equal(a.reason,'limit');assert.deepEqual(a.limited,['top','bottom']);assert.equal(a.crop.top,0);
+});
+test('a border exactly at the configured limit is accepted, beyond 45 percent remains rejected',()=>{
+ assert.equal(C.analyzeBars(frame(200,200,{top:90,bottom:90,left:0,right:0})).crop.top,.45);
+ assert.equal(C.analyzeBars(frame(200,200,{top:92,bottom:92,left:0,right:0})).reason,'limit');
+});
+test('disabled axes do not create limit warnings or fake successful auto crops',()=>{
+ const a=C.analyzeBars(frame(200,200,{top:80,bottom:80,left:0,right:0}),18,25,{autoH:false});
+ assert.equal(a.reason,'none');assert.deepEqual(a.crop,C.emptyCrop());
+});
+test('bright content inside a bar is reported and never cropped over',()=>{
+ const f=frame(200,200,{top:70,bottom:70,left:0,right:0});
+ for(let y=191;y<194;y++)for(let x=60;x<140;x++){const i=(y*200+x)*4;f.data[i]=f.data[i+1]=f.data[i+2]=255;}
+ const a=C.analyzeBars(f);assert.equal(a.reason,'obstructed');assert.ok(a.obstructed.includes('bottom'));assert.ok(a.crop.bottom<=.03);
+});
+test('manual wide crops have a hard 45 percent per-edge cap and leave valid image area',()=>{
+ const s=C.normalize({cropTop:44,cropBottom:44,cropLeft:45,cropRight:45,autoH:false,autoV:false}),c=C.cropFor(s),r=C.croppedRect(box,c);
+ assert.equal(c.top,.44);assert.ok(r.width>0&&r.height>0);assert.equal(C.normalize({cropTop:99}).cropTop,45);
 });

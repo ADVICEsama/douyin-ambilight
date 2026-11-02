@@ -4,7 +4,7 @@
   const C = DACore;
   const native = new DANative.NativeBackground(), videoStyles = new DANative.StyleLedger(), clipStyles = new DANative.StyleLedger(), filterStyles = new DANative.StyleLedger(), pageStyler = new DAPage.PageStyler();
   let nativeCount = 0, baseScale = 'none', crop = C.emptyCrop(), barState = { crop: C.emptyCrop(), pending: null, count: 0 };
-  let detection = '等待检测', sampleBlocked = false, lastSample = -Infinity;
+  let detection = '等待检测', sampleBlocked = false, lastSample = -Infinity, sampleInfo='尚未取样', geometryInfo='等待布局';
   const sample = document.createElement('canvas');
   const sampleCtx = sample.getContext('2d', { willReadFrequently: true });
   let settings = { ...C.defaults }, active = null, source = '', sourceTime = 0;
@@ -54,12 +54,12 @@
     const nativeText = !settings.hideNative ? '保留网站模糊背景' : `已隐藏 ${nativeCount} 个网站背景层`;
     const cropText = Object.entries(crop).map(([k,v]) => `${({top:'上',bottom:'下',left:'左',right:'右'})[k]} ${(v*100).toFixed(1)}%`).join(' / ');
     const regions=pageStyler.found;
-    const text = `${nativeText}\n编码黑边：${detection}\n当前取样裁边：${cropText}${settings.cropVideo ? '\n原视频裁剪已开启（注意字幕）' : '\n编码裁边仅影响环境光'}\n播放器留白：${settings.removeLetterbox?'几何裁剪已启用（不裁原画内容）':'保留'}\n合成：三层背景投影 / 独立视频背影\n渲染器：${renderer.mode==='webgl'?'WebGL2':'Canvas2D'} · 模式：${currentMode()}${rendererNote?'\n'+rendererNote:''}\n页面定位：顶栏 ${regions.header} / 左导航 ${regions.navigation} / 搜索 ${regions.search}\n评论推荐 ${regions.side} / 内容 ${regions.content} / 输入区 ${regions.sending} / 控制区 ${regions.controls}\n页面底板 ${regions.shell} / 已处理布局背景：${regions.surfaces} 层`;
+    const text = `${nativeText}\n视频源：${active?.videoWidth||0} × ${active?.videoHeight||0} · 取样 ${sampleInfo} · 单边上限 ${settings.maxCrop}%\n编码黑边：${detection}\n当前取样裁边：${cropText}${settings.cropVideo ? '\n原视频裁剪已开启（注意字幕）' : '\n编码裁边仅影响环境光'}\n播放器留白：${settings.removeLetterbox?'几何裁剪已启用（不裁原画内容）':'保留'}\nCSS 几何留白：${geometryInfo}\n合成：三层背景投影 / 独立视频背影\n渲染器：${renderer.mode==='webgl'?'WebGL2':'Canvas2D'} · 模式：${currentMode()}${rendererNote?'\n'+rendererNote:''}\n页面定位：顶栏 ${regions.header} / 左导航 ${regions.navigation} / 搜索 ${regions.search}\n评论推荐 ${regions.side} / 内容 ${regions.content} / 输入区 ${regions.sending} / 控制区 ${regions.controls}\n页面底板 ${regions.shell} / 已处理布局背景：${regions.surfaces} 层`;
     ui.diagnostics(text); layer.dataset.diagnostics = text;
   }
   function resetDetection() {
     barState = { crop: C.emptyCrop(), pending: null, count: 0 }; crop = C.cropFor(settings, barState.crop);
-    sampleBlocked = false; lastSample = -Infinity; sample.width = 256;
+    sampleBlocked = false; lastSample = -Infinity; sample.width = 256;sampleInfo='尚未取样';geometryInfo='等待布局';
     detection = settings.autoH || settings.autoV ? '等待稳定画面' : '自动检测已关闭';
   }
   function detect(now) {
@@ -72,10 +72,16 @@
       const w = Math.max(16, Math.round(ratio >= 1 ? 256 : 256 * ratio)), h = Math.max(16, Math.round(ratio >= 1 ? 256 / ratio : 256));
       if (sample.width !== w || sample.height !== h) { sample.width = w; sample.height = h; }
       sampleCtx.drawImage(active, 0, 0, w, h);
-      const candidate = C.detectBars(sampleCtx.getImageData(0, 0, w, h), settings.threshold, settings.maxCrop, settings);
-      barState = C.stabilize(barState, candidate, settings.stableFrames);
+      sampleInfo=`${w} × ${h}`;
+      const analysis = C.analyzeBars(sampleCtx.getImageData(0, 0, w, h), settings.threshold, settings.maxCrop, settings),candidate=analysis.crop;
+      barState = C.stabilize(barState, analysis.reason==='limit'?null:candidate, settings.stableFrames);
       crop = C.cropFor(settings, barState.crop);
-      detection = !candidate ? '暗场/全黑帧，保留上次结果' : barState.count < settings.stableFrames ? `稳定确认 ${barState.count}/${settings.stableFrames}` : Object.values(barState.crop).some(v => v > 0) ? '检测成功，已排除黑边' : '未检测到连续黑边';
+      const stable=barState.count<settings.stableFrames?`稳定确认 ${barState.count}/${settings.stableFrames}`:Object.values(barState.crop).some(v=>v>0)?'检测成功，已应用稳定裁边':'已完成稳定检测，未识别出连续黑边';
+      if(analysis.reason==='limit')detection=`${analysis.limited.map(k=>({top:'上',bottom:'下',left:'左',right:'右'})[k]).join('/')}边黑区超过单边 ${settings.maxCrop}% 检测范围，未采用新结果`;
+      else if(analysis.reason==='dark')detection='暗场/全黑帧，保留上次结果';
+      else if(analysis.reason==='obstructed')detection=`边缘有非黑色内容（可能是字幕/水印），保守处理 · ${stable}`;
+      else if(analysis.reason==='asymmetric')detection=`两侧差异超过不对称容差 · ${stable}`;
+      else detection=stable;
     } catch (e) {
       sampleBlocked = true; crop = C.cropFor(settings);
       detection = e.name === 'SecurityError' ? '跨域像素受限，自动检测不可用；手动裁边可用' : '当前画面无法检测；手动裁边可用';
@@ -167,6 +173,8 @@
       filterStyles.set(active,'filter',`${baseFilter==='none'?'':baseFilter+' '}${adjustment}`.trim()||'none');
     }else filterStyles.restore(active);
     const original = C.contentRect(box.rect, active.videoWidth, active.videoHeight, style.objectFit, style.objectPosition);
+    const visibleImage=C.intersect(original,box.rect);
+    geometryInfo=`上 ${(Math.max(0,visibleImage.top-box.rect.top)/box.rect.height*100).toFixed(1)}% / 下 ${(Math.max(0,box.rect.top+box.rect.height-visibleImage.top-visibleImage.height)/box.rect.height*100).toFixed(1)}% / 左 ${(Math.max(0,visibleImage.left-box.rect.left)/box.rect.width*100).toFixed(1)}% / 右 ${(Math.max(0,box.rect.left+box.rect.width-visibleImage.left-visibleImage.width)/box.rect.width*100).toFixed(1)}%（${style.objectFit}）`;
     const cropped = C.croppedRect(original, crop);
     const image = settings.cropVideo ? cropped : original;
     const hole = C.intersect(image, box.visible);

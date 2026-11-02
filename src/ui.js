@@ -23,7 +23,7 @@
     const el = (tag, text, attrs = {}) => { const node=document.createElement(tag);if(text)node.textContent=text;for(const [k,v]of Object.entries(attrs))node.setAttribute(k,String(v));return node; };
     const style=el('style',css);shadow.append(style);
     const panel=el('section',null,{class:`panel${floating?' floating':''}`,'aria-label':'抖音环境光设置'});shadow.append(panel);
-    const header=el('header'),close=el('button','×',{class:'close','aria-label':'关闭设置'});header.append(el('h1','抖音环境光'),close);panel.append(header,el('div','DOUYIN AMBILIGHT · 0.5.2 · 本地渲染',{class:'sub'}));
+    const header=el('header'),close=el('button','×',{class:'close','aria-label':'关闭设置'});header.append(el('h1','抖音环境光'),close);panel.append(header,el('div','DOUYIN AMBILIGHT · 0.5.3 · 本地渲染',{class:'sub'}));
     function section(title, open=false){const d=el('details');d.open=open;d.append(el('summary',title));panel.append(d);return d;}
     function checkbox(parent,key,label){const row=el('label',label,{class:'row'});row.append(el('input',null,{type:'checkbox','data-key':key}));parent.append(row);}
     function range(parent,key,label,unit='%'){const row=el('label',null,{class:'range'}),line=el('span',label);line.append(el('output',null,{'data-for':key}));row.append(line,el('input',null,{type:'range','aria-label':label,'data-key':key,min:DACore.ranges[key][0],max:DACore.ranges[key][1],step:1,'data-unit':unit}));parent.append(row);}
@@ -47,7 +47,7 @@
     checkbox(bars,'autoH','自动检测上下黑边');checkbox(bars,'autoV','自动检测左右黑边');checkbox(bars,'coloredBars','同时检测均匀彩色边');
     range(bars,'threshold','黑色阈值',' / 255');range(bars,'colorTolerance','彩色边色差容限',' / 255');range(bars,'maxCrop','单边最大检测范围');range(bars,'cropOffset','自动裁边偏移');range(bars,'stableFrames','稳定样本数',' 次');range(bars,'certainty','像素确定性门槛');range(bars,'uneven','不对称容差');
     select(bars,'detectInterval','检测间隔',[[250,'0.25 秒'],[500,'0.5 秒'],[1000,'1 秒'],[2000,'2 秒']]);
-    bars.append(el('p','自动检测需要像素访问权限。跨域受限时会停止重试并提示，下面的手动裁边仍可用。彩色检测只针对均匀边框，不是主体识别。',{class:'note'}));
+    bars.append(el('p','单边检测默认最多 45%，用于横画面嵌入高画布的巨大上下黑边；若超出所设范围会明确提示，不再当成“没有黑边”。跨域受限时手动四边仍可用，最大各 45%。彩色检测只针对均匀边框，不是主体识别。',{class:'note'}));
     for(const [key,label]of [['cropTop','手动裁上边'],['cropBottom','手动裁下边'],['cropLeft','手动裁左边'],['cropRight','手动裁右边']])range(bars,key,label);
     checkbox(bars,'resetCropOnVideo','换视频时重设手动裁边');checkbox(bars,'cropVideo','同时裁剪原视频画面');checkbox(bars,'fillAfterCrop','放大填满裁边后的空间');
     bars.append(el('p','播放器留白用几何裁剪去除，不需要读像素；编码黑边需要检测或手动裁边。原视频裁剪默认启用，填满默认关闭，避免裁掉两侧画面。请注意字幕。',{class:'note'}));

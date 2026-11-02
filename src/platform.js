@@ -5,16 +5,26 @@
   const api = gm ? null : (globalThis.browser || globalThis.chrome);
   const listeners = new Set();
   async function readMigrated(raw) {
+    if(!raw||typeof raw!=='object')return DACore.normalize(raw);
+    let changed=false;const original=raw;
     if(raw&&typeof raw==='object'&&raw.layoutVersion!==3){
       const backup=key+'-before-layout-v3';
       if(gm)await GM_setValue(backup,raw);else await api.storage.local.set({[backup]:raw});
       raw={...raw,layoutVersion:3,blend:'normal',cropVideo:true,removeLetterbox:true,autoH:true,videoShadow:48,videoShadowOpacity:65,immersiveHeader:true,transparentSidePanels:true,transparentPageContent:true,transparentSendingBar:true};
       if(raw.fps===24)raw.fps=60;
-      const value=DACore.normalize(raw);
-      if(gm)await GM_setValue(key,value);else await api.storage.local.set({[key]:value});
-      return value;
+      changed=true;
     }
-    return DACore.normalize(raw);
+    if(raw.barDetectionVersion!==1){
+      const backup=key+'-before-wide-bars-v1';
+      if(gm)await GM_setValue(backup,original);else await api.storage.local.set({[backup]:original});
+      raw={...raw,barDetectionVersion:1};
+      // Migrate only the old default. Respect non-default user limits.
+      if(raw.maxCrop===undefined||raw.maxCrop===25)raw.maxCrop=45;
+      changed=true;
+    }
+    const value=DACore.normalize(raw);
+    if(changed){if(gm)await GM_setValue(key,value);else await api.storage.local.set({[key]:value});}
+    return value;
   }
   const emit = (value) => { for (const fn of listeners) fn(DACore.normalize(value)); };
   if (gm && typeof GM_addValueChangeListener === 'function') {

@@ -2,7 +2,7 @@
 
 为 **抖音网页版** 视频添加随画面变化的柔和环境光，让视频、评论区、导航和顶栏的背景自然衔接。
 
-**MIT 开源 · 本地渲染 · 非官方 · 当前测试版 0.5.2**
+**MIT 开源 · 本地渲染 · 非官方 · 当前测试版 0.5.3**
 
 > 灵感与功能分类参考 **Wessel Kroos** 的 [youtube-ambilight](https://github.com/WesselKroos/youtube-ambilight)，站点适配参考 **iceorange-dev** 的 [bilibili-ambilight](https://github.com/iceorange-dev/bilibili-ambilight)。感谢两位作者及上游贡献者。本项目是面向抖音的独立轻量实现，**不是原版完整引擎移植，也不代表上游作者或抖音官方**。详见[参考与致谢](#参考与致谢)和[功能对照](功能对照.md)。
 
@@ -26,17 +26,29 @@
 
 [更多区域预览](docs/assets/regions-local.png) · [独立底板与阴影预览](docs/assets/occlusion-local.png)
 
+## 0.5.3：超宽黑边
+
+横画面嵌在高画布里时，上下编码黑边可能各占 35% 以上。旧版默认只扫描单边 25%，界面最高 35%；达到上限后又返回 0，导致误报“未检测到”。
+
+- 默认单边上限扩至 **45%**，手动四边也支持各 45%，始终至少保留 10% 的宽/高。
+- 达到上限、暗场、边缘亮字/水印干扰和不对称拒绝分开提示；不会把“范围不足”当作“没有黑边”。
+- 新诊断同时显示视频源尺寸、取样画布、配置上限与 CSS 几何留白，便于区分播放器留白和编码黑边。
+- 第一次升级会在本地备份旧设置；仅旧默认 25% 自动迁移到 45%，其他自定义上限保持不变。已经手动选过较低上限时，请按诊断自行调整。
+- 已在独立未登录会话对公开详情页的视频源 `1080×2114` 验证：上下编码黑边各约 **35.5%**，新包检测并应用裁剪；不等于在用户个人 Zen 重新安装或验证全部视频。
+
+移除黑边不等于自动放大主体；如需要，可手动开启“放大填满裁边后的空间”，注意可能裁掉两侧内容。字幕出现在黑边内时仍采用保守边界，不保证自动移除所有含字黑边。
+
 ## 下载
 
-从 [v0.5.2 Release](https://github.com/ADVICEsama/douyin-ambilight/releases/tag/v0.5.2) 下载。**0.5.2 是开源发布整理版，环境光功能与 0.5.1 一致**，主要完善公开文档、署名与打包声明；目前不在扩展商店发布。
+从 [v0.5.3 Release](https://github.com/ADVICEsama/douyin-ambilight/releases/tag/v0.5.3) 下载。**0.5.3 修复超宽黑边漏检**，保留 0.5.1 的评论区融合修复与 0.5.2 的开源署名/文档；目前不在扩展商店发布。
 
 | 使用方式 | 文件 |
 |---|---|
-| Chrome / Edge | [Chrome ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.2/douyin-ambilight-0.5.2-chrome.zip) |
-| Firefox / Zen 开发测试 | [未签名 XPI](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.2/douyin-ambilight-0.5.2-firefox-unsigned.xpi) |
-| 脚本管理器 | [用户脚本 .user.js](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.2/douyin-ambilight-0.5.2.user.js) |
-| 源码 | [源码 ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.2/douyin-ambilight-0.5.2-source.zip) |
-| 完整性核对 | [SHA256](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.2/SHA256-0.5.2.txt) |
+| Chrome / Edge | [Chrome ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3-chrome.zip) |
+| Firefox / Zen 开发测试 | [未签名 XPI](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3-firefox-unsigned.xpi) |
+| 脚本管理器 | [用户脚本 .user.js](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3.user.js) |
+| 源码 | [源码 ZIP](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/douyin-ambilight-0.5.3-source.zip) |
+| 完整性核对 | [SHA256](https://github.com/ADVICEsama/douyin-ambilight/releases/download/v0.5.3/SHA256-0.5.3.txt) |
 
 源码、许可证及发布包公开可读；使用插件本身不需要 GitHub 登录。项目没有配置自动更新地址，需要手动更新。
 
@@ -75,7 +87,7 @@
 
 默认快捷键：`Alt + Shift + A` 开关环境光，`Alt + Shift + L` 打开设置。在输入框中输入时不会触发这些快捷键；可在“基本设置”修改。
 
-菜单含 **11 类、86 个持久用户设置及预设**，另有内部迁移版本字段。四套预设为均衡、影院、鲜艳、省电。
+菜单含 **11 类、86 个持久用户设置及预设**，另有布局与检测两个内部迁移字段。四套预设为均衡、影院、鲜艳、省电。
 
 | 分类 | 主要选项 |
 |---|---|
@@ -144,13 +156,14 @@ npm run test:spatial
 npm run test:regions
 npm run test:occlusion
 npm run test:comments
+npm run test:wide-bars
 node scripts/verify.mjs
 npx web-ext lint --source-dir ../../outputs/douyin-ambilight/firefox
 ```
 
 默认输出到仓库的 `../../outputs`；可用 `DA_OUTPUT` 覆盖，验证和测试沿用同一变量。手动 CI 见 [.github/workflows/check.yml](.github/workflows/check.yml)，不会因推送自动触发，提交工作流不等于远程运行通过。
 
-本地已有 **18 项单元测试 + 71 项浏览器检查**。0.5.1 曾在一套 Zen 环境更新 XPI、刷新并打开真实评论区，确认面板、标签栏和输入区融合；这不等于所有路线、真实横竖屏切换、浏览器重启、GM 管理器或显卡组合都经过实测。0.5.2 不改变光效逻辑；验证范围及已知测试波动见[验证报告](验证报告.md)。
+本地已有 **24 项单元测试 + 81 项浏览器检查**。0.5.1 曾在一套 Zen 环境更新 XPI、刷新并打开真实评论区，确认面板、标签栏和输入区融合；这不等于所有路线、真实横竖屏切换、浏览器重启、GM 管理器或显卡组合都经过实测。0.5.3 另在独立未登录会话验证超宽编码黑边；验证范围及已知测试波动见[验证报告](验证报告.md)。
 
 ## 反馈问题
 

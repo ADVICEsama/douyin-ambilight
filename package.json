@@ -1,6 +1,6 @@
 {
   "name": "douyin-ambilight",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
     "test:spatial": "node tests/spatial-browser.mjs",
     "test:regions": "node tests/regions-browser.mjs",
     "test:occlusion": "node tests/occlusion-browser.mjs",
-    "test:comments": "node tests/comments-browser.mjs"
+    "test:comments": "node tests/comments-browser.mjs",
+    "test:wide-bars": "node tests/wide-bars-browser.mjs"
   },
   "devDependencies": {
     "fflate": "^0.8.2",

@@ -18,7 +18,7 @@ const pixel=(png,x,y)=>[...png.data.slice((Math.round(y)*png.width+Math.round(x)
 try{
  let oldAvailable=true;try{await access(path.join(out,'douyin-ambilight-0.2.0.user.js'));}catch{oldAvailable=false;}
  if(oldAvailable){const old=await create('0.2.0');await old.screenshot({path:path.join(out,'修复前-本地模拟.png')});await old.close();}else console.log('Old 0.2.0 bundle absent: skipping old-version preview only');
- const page=await create('0.5.2');
+ const page=await create('0.5.3');
  await check('hashed unfiltered native background and pseudo layer are hidden; danmaku and controls stay visible',async()=>{
    assert.equal(await page.locator('.QpH7y').evaluate(e=>getComputedStyle(e).visibility),'hidden');assert.equal(await page.locator('#player').evaluate(e=>getComputedStyle(e,'::before').visibility),'hidden');
    assert.equal(await page.locator('.danmaku').evaluate(e=>getComputedStyle(e).visibility),'visible');assert.equal(await page.locator('.xgplayer-controls').evaluate(e=>getComputedStyle(e).visibility),'visible');

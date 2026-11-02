@@ -3,7 +3,7 @@
   'use strict';
   const defaults = Object.freeze({ enabled: true, intensity: 70, spread: 150, blur: 65, saturation: 120, fps: 60, smoothing: 65, showButton: true,
     hideNative: true, brightness: 90, contrast: 100, hue: 0, stretchX: 100, stretchY: 100, dim: 0, blend: 'normal', quality: 96,
-    glowTop: true, glowBottom: true, glowLeft: true, glowRight: true, autoH: true, autoV: true, threshold: 18, maxCrop: 25, detectInterval: 1000, stableFrames: 3,
+    glowTop: true, glowBottom: true, glowLeft: true, glowRight: true, autoH: true, autoV: true, threshold: 18, maxCrop: 45, barDetectionVersion: 1, detectInterval: 1000, stableFrames: 3,
     cropTop: 0, cropBottom: 0, cropLeft: 0, cropRight: 0, cropVideo: true, removeLetterbox: true, layoutVersion: 3, videoScale: 100,
     renderer: 'canvas', frameSync: 'video', prioritizeLoad: false, showFPS: false, showFrametimes: false, showResolutions: false, showBarStats: false,
     headerShadow: 0, headerShadowOpacity: 0, headerImagesOpacity: 100, headerFillOpacity: 100,
@@ -16,7 +16,7 @@
   });
   const ranges = { intensity: [0, 100], spread: [30, 350], blur: [15, 150], saturation: [50, 250], smoothing: [0, 95],
     brightness: [30, 200], contrast: [50, 200], hue: [-180, 180], stretchX: [50, 200], stretchY: [50, 200], dim: [0, 70],
-    threshold: [0, 64], maxCrop: [5, 35], stableFrames: [2, 6], cropTop: [0, 30], cropBottom: [0, 30], cropLeft: [0, 30], cropRight: [0, 30], videoScale: [100, 180],
+    threshold: [0, 64], maxCrop: [5, 45], stableFrames: [2, 6], cropTop: [0, 45], cropBottom: [0, 45], cropLeft: [0, 45], cropRight: [0, 45], videoScale: [100, 180],
     headerShadow: [0,80], headerShadowOpacity:[0,100], headerImagesOpacity:[0,100], headerFillOpacity:[0,100],
     contentShadow:[0,80], contentShadowOpacity:[0,100], contentImagesOpacity:[0,100], contentFillOpacity:[0,100], pageGray:[0,100],
     videoScaleTheater:[100,180], videoScaleFullscreen:[100,180],videoShadow:[0,80],videoShadowOpacity:[0,100],
@@ -88,21 +88,35 @@
     return {due:true,next:start+(Math.floor(Math.max(0,now-start)/period)+1)*period};
   }
   const emptyCrop = () => ({ top: 0, bottom: 0, left: 0, right: 0 });
-  function detectBars({ data, width, height }, threshold = 18, maxCrop = 25, options = {}) {
-    if (width < 8 || height < 8) return null;
+  function analyzeBars({ data, width, height }, threshold = 18, maxCrop = 45, options = {}) {
+    if (width < 8 || height < 8) return {crop:null,reason:'unavailable',limited:[],obstructed:[]};
     const black = (x, y) => { const i = (y * width + x) * 4; return Math.max(data[i], data[i + 1], data[i + 2]) <= threshold; };
     let signal = 0, total = 0;
     for (let y = Math.floor(height * .3); y < height * .7; y += 2) for (let x = Math.floor(width * .3); x < width * .7; x += 2) { total++; if (!black(x, y)) signal++; }
-    if (signal / total < .1) return null; // Dark frames/fades must not trigger a new crop.
+    if (signal / total < .1) return {crop:null,reason:'dark',limited:[],obstructed:[]}; // Never crop a fade/all-black frame.
     const certainty = (options.certainty ?? 98.5) / 100;
     const rowBlack = y => { let n = 0, dark = 0; for (let x = 0; x < width; x++) { n++; if (black(x, y)) dark++; } return dark / n >= certainty; };
     const colBlack = x => { let n = 0, dark = 0; for (let y = 0; y < height; y++) { n++; if (black(x, y)) dark++; } return dark / n >= certainty; };
-    const scan = (size, check, reverse) => { let n = 0; const limit = Math.floor(size * maxCrop / 100); while (n < limit && check(reverse ? size - 1 - n : n)) n++; return n >= 2 && n < limit ? n / size : 0; };
-    const result = { top: scan(height, rowBlack, false), bottom: scan(height, rowBlack, true), left: scan(width, colBlack, false), right: scan(width, colBlack, true) };
+    const limited=new Set(),obstructed=new Set(),enabled=side=>(side==='top'||side==='bottom')?options.autoH!==false:options.autoV!==false;
+    const scan = (side,size,check,reverse) => {
+      if(!enabled(side))return 0;
+      let n=0;const limit=Math.max(2,Math.floor(size*Math.min(45,Math.max(0,maxCrop))/100));
+      while(n<=limit&&n<size&&check(reverse?size-1-n:n))n++;
+      // Read one row past the configured boundary: an edge EXACTLY at the
+      // maximum is valid; continuing black beyond it is a limit, not "none".
+      if(n>limit){limited.add(side);return 0;}
+      // A bright caption/logo followed by more black must not be cropped over.
+      // Keep the conservative first boundary, but make the obstruction visible.
+      let run=0;for(let k=n+1;k<Math.min(limit,n+Math.max(8,Math.ceil(size*.08)));k++){
+        if(check(reverse?size-1-k:k)){if(++run>=3){obstructed.add(side);break;}}else run=0;
+      }
+      return n>=2?n/size:0;
+    };
+    const result = { top: scan('top',height,rowBlack,false), bottom: scan('bottom',height,rowBlack,true), left: scan('left',width,colBlack,false), right: scan('right',width,colBlack,true) };
     if(options.coloredBars){
       const tolerance=options.colorTolerance??20;
       for(const [side,horizontal,reverse]of [['top',true,false],['bottom',true,true],['left',false,false],['right',false,true]]){
-        if(result[side])continue;
+        if(result[side]||limited.has(side)||!enabled(side))continue;
         const size=horizontal?height:width,lineLength=horizontal?width:height,index=reverse?size-1:0;
         const values=[[],[],[]];for(let p=0;p<lineLength;p++){const i=(horizontal?index*width+p:p*width+index)*4;for(let c=0;c<3;c++)values[c].push(data[i+c]);}
         const color=values.map(v=>v.sort((a,b)=>a-b)[Math.floor(v.length/2)]);
@@ -110,14 +124,17 @@
         let different=0,n=0;for(let y=Math.floor(height*.3);y<height*.7;y+=3)for(let x=Math.floor(width*.3);x<width*.7;x+=3){n++;if(!matches(x,y))different++;}
         if(different/n<.3)continue; // Uniform scenes are not borders.
         const check=line=>{let matched=0;for(let p=0;p<lineLength;p++)if(matches(horizontal?p:line,horizontal?line:p))matched++;return matched/lineLength>=certainty;};
-        result[side]=scan(size,check,reverse);
+        result[side]=scan(side,size,check,reverse);
       }
     }
     const uneven=(options.uneven??35)/100+.012;
-    if(Math.abs(result.top-result.bottom)>uneven)result.top=result.bottom=0;
-    if(Math.abs(result.left-result.right)>uneven)result.left=result.right=0;
-    return result;
+    let asymmetric=false;
+    if(Math.abs(result.top-result.bottom)>uneven){result.top=result.bottom=0;asymmetric=true;}
+    if(Math.abs(result.left-result.right)>uneven){result.left=result.right=0;asymmetric=true;}
+    const hasCrop=Object.values(result).some(v=>v>0);
+    return {crop:result,reason:limited.size?'limit':obstructed.size?'obstructed':asymmetric?'asymmetric':hasCrop?'detected':'none',limited:[...limited],obstructed:[...obstructed]};
   }
+  function detectBars(frame,threshold=18,maxCrop=45,options={}){return analyzeBars(frame,threshold,maxCrop,options).crop;}
   function stabilize(state, candidate, required) {
     if (!candidate) return state;
     const matches = state.pending && Object.keys(candidate).every(k => Math.abs(candidate[k] - state.pending[k]) < .012);
@@ -125,9 +142,9 @@
     return { pending: candidate, count, crop: count >= required ? { ...candidate } : state.crop };
   }
   function cropFor(s, auto = emptyCrop()) {
-    const edge=(side,enabled)=>Math.min(.4,Math.max(0,s['crop'+side[0].toUpperCase()+side.slice(1)]/100+(enabled&&auto[side]>0?Math.max(0,auto[side]+s.cropOffset/100):0)));
+    const edge=(side,enabled)=>Math.min(.45,Math.max(0,s['crop'+side[0].toUpperCase()+side.slice(1)]/100+(enabled&&auto[side]>0?Math.max(0,auto[side]+s.cropOffset/100):0)));
     return {top:edge('top',s.autoH),bottom:edge('bottom',s.autoH),left:edge('left',s.autoV),right:edge('right',s.autoV)};
   }
   function croppedRect(rect, c) { return { left: rect.left + rect.width * c.left, top: rect.top + rect.height * c.top, width: rect.width * (1 - c.left - c.right), height: rect.height * (1 - c.top - c.bottom) }; }
-  globalThis.DACore = Object.freeze({ defaults, ranges, presets, normalize, intersect, contentRect, score, holeClip, frameAlpha, frameDeadline, emptyCrop, detectBars, stabilize, cropFor, croppedRect });
+  globalThis.DACore = Object.freeze({ defaults, ranges, presets, normalize, intersect, contentRect, score, holeClip, frameAlpha, frameDeadline, emptyCrop, analyzeBars, detectBars, stabilize, cropFor, croppedRect });
 })();
