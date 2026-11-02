@@ -1,6 +1,6 @@
 {
   "name": "douyin-ambilight",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,5 +24,8 @@
     "type": "git",
     "url": "git+https://github.com/ADVICEsama/douyin-ambilight.git"
   },
-  "homepage": "https://github.com/ADVICEsama/douyin-ambilight"
+  "homepage": "https://github.com/ADVICEsama/douyin-ambilight",
+  "license": "MIT",
+  "author": "ADVICEsama",
+  "description": "抖音网页版实时环境光，支持视频阴影、黑边检测和页面融合。非官方独立实现。"
 }

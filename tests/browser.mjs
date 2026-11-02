@@ -111,7 +111,7 @@ try {
   // Different host intentionally avoids extension duplication; content is local and fully controlled.
   await context.route('http://localhost:54329/fixture', r=>r.fulfill({body:fixture,contentType:'text/html'}));
   await user.goto('http://localhost:54329/fixture');
-  await user.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.5.1.user.js'),'utf8')});
+  await user.addScriptTag({content:await readFile(path.join(out,'douyin-ambilight-0.5.2.user.js'),'utf8')});
   await check('userscript bundle renders with GM adapter',async()=>{
     await user.waitForFunction(()=>document.querySelector('#douyin-ambilight-layer')?.dataset.state.includes('环境光运行中'));
     await user.keyboard.press('Alt+Shift+L');

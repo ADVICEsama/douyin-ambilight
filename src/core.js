@@ -1,4 +1,4 @@
-/* Original lightweight implementation; see README for reference project. */
+/* Douyin Ambilight. MIT. References and upstream notices: THIRD_PARTY_NOTICES.md. */
 (() => {
   'use strict';
   const defaults = Object.freeze({ enabled: true, intensity: 70, spread: 150, blur: 65, saturation: 120, fps: 60, smoothing: 65, showButton: true,

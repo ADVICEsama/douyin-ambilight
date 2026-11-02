@@ -55,7 +55,7 @@ for (const browser of ['chrome', 'firefox']) {
   await writeFile(path.join(dir, 'manifest.json'), JSON.stringify(m, null, 2) + '\n');
   for (const file of [...scripts, 'popup.html', 'popup.css', 'popup.js']) await copyFile(path.join(root, 'src', file), path.join(dir, file));
   for (const size of [16, 32, 48, 128]) await writeFile(path.join(dir, 'icons', `${size}.png`), icon(size));
-  for (const file of ['README.md', 'LICENSE', 'PRIVACY.md', '验证报告.md', '功能对照.md','CHANGELOG.md']) await copyFile(path.join(root, file), path.join(dir, file));
+  for (const file of ['README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md', '验证报告.md', '功能对照.md','CHANGELOG.md']) await copyFile(path.join(root, file), path.join(dir, file));
   await mkdir(path.join(dir,'docs','assets'),{recursive:true});
   for(const file of ['regions-local.png','occlusion-local.png','comments-local.png'])await copyFile(path.join(root,'docs','assets',file),path.join(dir,'docs','assets',file));
   await writeFile(path.join(out, `douyin-ambilight-${pkg.version}-${browser}${browser === 'firefox' ? '-unsigned.xpi' : '.zip'}`), zipSync(await collect(dir)));
@@ -74,6 +74,8 @@ const meta = `// ==UserScript==
 // @run-at       document-idle
 // @noframes
 // @license      MIT
+// @homepageURL  https://github.com/ADVICEsama/douyin-ambilight
+// @supportURL   https://github.com/ADVICEsama/douyin-ambilight/issues
 // ==/UserScript==
 `;
 const bundle = (await Promise.all(scripts.map(f => readFile(path.join(root, 'src', f), 'utf8')))).join('\n');
